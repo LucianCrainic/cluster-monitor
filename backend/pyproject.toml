@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cluster-monitor"
+version = "0.1.0"
+description = "Local Slurm monitoring API with guarded job actions"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "PyYAML>=6.0.2,<7",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx2>=2.7,<3",
+  "mypy>=1.14,<2",
+  "pytest>=9.0.3,<10",
+  "ruff>=0.9,<1",
+  "types-PyYAML>=6.0.12.20241230",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cluster_monitor"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/cluster_monitor/config/default_clusters.yaml" = "cluster_monitor/config/default_clusters.yaml"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["cluster_monitor"]
+mypy_path = "src"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true

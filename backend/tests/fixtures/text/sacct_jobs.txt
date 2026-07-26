@@ -1,0 +1,4 @@
+290|290|train|alice|gpu|COMPLETED|1|gpu001|32|2Gn|billing=32,cpu=32,mem=64G,node=1,gres/gpu=2,gres/gpu:a100=2|2026-07-25T08:00:00+02:00|2026-07-25T08:05:00+02:00|2026-07-25T08:50:01+02:00|00:45:01|04:00:00|None
+290.batch|290.batch|batch|alice||COMPLETED|1|gpu001|32|2Gn|cpu=32,mem=2G,node=1|2026-07-25T08:00:00+02:00|2026-07-25T08:05:00+02:00|2026-07-25T08:50:01+02:00|00:45:01|04:00:00|None
+291|291|oom|alice|compute|OUT_OF_MEMORY|2|cpu[001-002]|8|512Mc|cpu=8,mem=4G,node=2|2026-07-24T06:00:00|2026-07-24T06:01:00|2026-07-25T07:01:00|1-01:00:00|2-00:00:00|OutOfMemory
+292|292|cancel|bob|debug|CANCELLED by 1001|0|None assigned|1|1024M|cpu=1,mem=1G,node=1|2026-07-23T12:00:00|Unknown|Unknown|00:00:00|Partition_Limit|Priority | QOS cap

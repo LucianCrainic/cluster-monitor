@@ -1,0 +1,15 @@
+application:
+  bind_host: 127.0.0.1
+  port: 8000
+  refresh:
+    overview_seconds: 10
+    jobs_seconds: 10
+    nodes_seconds: 30
+    partitions_seconds: 30
+    history_seconds: 60
+
+clusters:
+  - id: local-mock
+    name: Local Mock Cluster
+    backend: mock
+    allow_job_actions: true

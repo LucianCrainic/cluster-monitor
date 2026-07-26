@@ -1,0 +1,2 @@
+42000|42000_7|parameter-sweep|researcher|compute|PENDING|1||2|2048Mn|cpu=2,mem=2G,node=1|2026-07-26T10:00:00|Unknown|Unknown|00:00:00|00:30:00|Priority
+43000|43000+0|coupled-workflow|researcher|compute|RUNNING|1|cpu001|4|4096Mn|cpu=4,mem=4G,node=1|2026-07-26T10:00:00|2026-07-26T10:01:00|Unknown|00:01:00|00:30:00|None

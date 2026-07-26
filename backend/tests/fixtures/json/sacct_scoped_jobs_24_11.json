@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "data_parser/v0.0.42"
+    }
+  },
+  "errors": [],
+  "jobs": [
+    {
+      "job_id": 42000,
+      "array": {
+        "job_id": 42000,
+        "task_id": {
+          "set": false,
+          "infinite": false,
+          "number": 4294967294
+        },
+        "task": "1-128%8"
+      },
+      "het": {
+        "job_id": 0,
+        "job_offset": {
+          "set": false,
+          "infinite": false,
+          "number": 4294967294
+        }
+      },
+      "name": "parameter-sweep",
+      "user": {
+        "name": "researcher"
+      },
+      "partition": {
+        "name": "compute"
+      },
+      "state": {
+        "current": [
+          "PENDING"
+        ],
+        "reason": "Priority"
+      },
+      "allocation_nodes": 1,
+      "required": {
+        "CPUs": 2,
+        "memory_per_node": {
+          "set": true,
+          "infinite": false,
+          "number": 2048
+        }
+      },
+      "time": {
+        "submission": {
+          "set": true,
+          "infinite": false,
+          "number": 1785078000
+        },
+        "elapsed": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "limit": {
+          "set": true,
+          "infinite": false,
+          "number": 30
+        }
+      }
+    },
+    {
+      "job_id": 43000,
+      "array": {
+        "job_id": 0,
+        "task_id": {
+          "set": false,
+          "infinite": false,
+          "number": 4294967294
+        },
+        "task": ""
+      },
+      "het": {
+        "job_id": 43000,
+        "job_offset": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        }
+      },
+      "name": "coupled-workflow",
+      "user": {
+        "name": "researcher"
+      },
+      "partition": {
+        "name": "compute"
+      },
+      "state": {
+        "current": [
+          "RUNNING"
+        ],
+        "reason": "None"
+      },
+      "allocation_nodes": 1,
+      "node_list": "cpu001",
+      "required": {
+        "CPUs": 4
+      },
+      "time": {
+        "submission": {
+          "set": true,
+          "infinite": false,
+          "number": 1785078000
+        },
+        "start": {
+          "set": true,
+          "infinite": false,
+          "number": 1785078060
+        },
+        "elapsed": {
+          "set": true,
+          "infinite": false,
+          "number": 60
+        },
+        "limit": {
+          "set": true,
+          "infinite": false,
+          "number": 30
+        }
+      }
+    }
+  ]
+}

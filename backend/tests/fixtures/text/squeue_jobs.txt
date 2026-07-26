@@ -1,0 +1,3 @@
+301|301|N/A|N/A|N/A|protein sim|alice|compute|RUNNING|1|cpu002|48|4Gc|gpu:a100:2|2026-07-26T08:55:00+02:00|2026-07-26T09:00:00+02:00|01:02:03|1-00:00:00|cpu002
+302|302|N/A|N/A|N/A|array_7|alice|gpu|PENDING|2||16|64Gn|gpu:h100:4|2026-07-26T10:45:00|N/A|00:00|06:00:00|(Resources)
+303|303|N/A|N/A|N/A|interactive|bob|debug|CONFIGURING|1|node[01-02,04]|8|8192M|N/A|2026-07-26T11:00:00|2026-07-26T11:02:00|1-02:03:04|UNLIMITED|Configuration | waiting

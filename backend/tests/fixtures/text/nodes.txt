@@ -1,0 +1,5 @@
+cpu001|compute*|IDLE|64|0/64/0/64|262144M|250000M|(null)|
+cpu002|compute|MIXED|64|32/30/2/64|256G|128G|gpu:a100:4(S:0-3),mps:100|
+cpu002|gpu|MIXED|64|32/30/2/64|256G|128G|gpu:a100:4(S:0-3),mps:100|
+cpu003|compute|ALLOCATED+DRAIN|64|64/0/0/64|262144|N/A|gpu:h100:2(IDX:0-1)|Hardware failure | ticket #42
+cpu004|debug|IDLE*|8|0/8/0/8|8192|4096|(null)|Not responding

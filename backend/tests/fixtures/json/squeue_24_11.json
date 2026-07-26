@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "data_parser/v0.0.41"
+    }
+  },
+  "errors": [],
+  "jobs": [
+    {
+      "job_id": {
+        "set": true,
+        "infinite": false,
+        "number": 12002
+      },
+      "name": "train-model",
+      "user_name": "researcher",
+      "partition": "gpu",
+      "job_state": [
+        "RUNNING"
+      ],
+      "state_reason": "None",
+      "node_count": 1,
+      "nodes": "gpu001",
+      "cpus": {
+        "set": true,
+        "infinite": false,
+        "number": 8
+      },
+      "required": {
+        "memory_per_cpu": {
+          "set": true,
+          "infinite": false,
+          "number": 2048
+        }
+      },
+      "tres": {
+        "requested": [
+          {
+            "type": "gres",
+            "name": "gpu:a100",
+            "id": 1001,
+            "count": 2
+          }
+        ]
+      },
+      "time": {
+        "submission": {
+          "set": true,
+          "infinite": false,
+          "number": 1768467600
+        },
+        "start": {
+          "set": true,
+          "infinite": false,
+          "number": 1768469400
+        },
+        "end": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "elapsed": {
+          "set": true,
+          "infinite": false,
+          "number": 3600
+        },
+        "limit": {
+          "set": true,
+          "infinite": false,
+          "number": 720
+        }
+      }
+    },
+    {
+      "id": "12003_7",
+      "job_name": "parameter-scan",
+      "user": {
+        "name": "researcher"
+      },
+      "partition": {
+        "name": "compute"
+      },
+      "state": {
+        "current": "PENDING",
+        "reason": {
+          "description": "Priority"
+        }
+      },
+      "nodes": {
+        "count": 2,
+        "list": "(null)"
+      },
+      "requested_cpus": 4,
+      "required": {
+        "memory_per_node": 4096
+      },
+      "tres_per_job": "gres/gpu=0",
+      "submit_time": "2026-01-15T10:45:00+00:00",
+      "start_time": {
+        "set": false,
+        "number": 0
+      },
+      "elapsed_seconds": 0,
+      "time_limit_minutes": 60
+    }
+  ]
+}
