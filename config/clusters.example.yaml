@@ -1,0 +1,23 @@
+# Copy this file to clusters.local.yaml, then replace every placeholder before
+# enabling a real cluster. Never put passwords, private keys, or tokens here.
+application:
+  refresh:
+    overview_seconds: 10
+    jobs_seconds: 10
+    nodes_seconds: 30
+    partitions_seconds: 30
+    history_seconds: 60
+
+clusters:
+  - id: local-mock
+    name: Local Mock Cluster
+    backend: mock
+    allow_job_actions: true
+
+  - id: sapienza
+    name: Sapienza HPC Cluster
+    backend: ssh
+    ssh_host: sapienza-hpc
+    slurm_user: current
+    command_timeout_seconds: 15
+    allow_job_actions: false
