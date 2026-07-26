@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+backend/.venv/
+backend/dist/
+coverage.xml
+.coverage
+htmlcov/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+*.tsbuildinfo
+
+# Local configuration and environment overrides
+.env
+.env.local
+.env.*.local
+config/clusters.local.yaml
+config/*.local.yaml
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local process output
+*.log
+*.pid
