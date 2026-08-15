@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "data_parser/v0.0.41"
+    }
+  },
+  "errors": [],
+  "jobs": [
+    {
+      "job_id": "11997",
+      "name": "broken-run",
+      "user": "researcher",
+      "partition": "compute",
+      "state": {
+        "current": [
+          "FAILED"
+        ],
+        "reason": "NonZeroExitCode"
+      },
+      "allocation_nodes": 1,
+      "nodes": "cpu002",
+      "required": {
+        "CPUs": 4,
+        "memory_per_node": {
+          "set": true,
+          "infinite": false,
+          "number": 8192
+        }
+      },
+      "tres": {
+        "requested": []
+      },
+      "time": {
+        "submission": {
+          "set": true,
+          "infinite": false,
+          "number": 1768458600
+        },
+        "start": {
+          "set": true,
+          "infinite": false,
+          "number": 1768458660
+        },
+        "end": {
+          "set": true,
+          "infinite": false,
+          "number": 1768458780
+        },
+        "elapsed": {
+          "set": true,
+          "infinite": false,
+          "number": 120
+        },
+        "limit": {
+          "set": true,
+          "infinite": false,
+          "number": 60
+        }
+      },
+      "working_directory": "/home/researcher/work/broken-run",
+      "command": "/home/researcher/bin/broken-run",
+      "standard_output": "/home/researcher/logs/11997.out",
+      "standard_error": "/home/researcher/logs/11997.err",
+      "exit_code": {
+        "return_code": 1,
+        "signal": {
+          "id": 0,
+          "name": ""
+        },
+        "status": [
+          "ERROR"
+        ]
+      }
+    },
+    {
+      "job_id": 11998,
+      "name": "preprocess",
+      "user": {
+        "name": "researcher"
+      },
+      "partition": {
+        "name": "compute"
+      },
+      "state": {
+        "current": [
+          "COMPLETED"
+        ],
+        "reason": "None"
+      },
+      "allocation_nodes": 1,
+      "node_list": "cpu001",
+      "required": {
+        "CPUs": {
+          "set": true,
+          "infinite": false,
+          "number": 8
+        },
+        "memory_per_node": {
+          "set": true,
+          "infinite": false,
+          "number": 16384
+        }
+      },
+      "tres": {
+        "requested": [
+          {
+            "type": "gres",
+            "name": "gpu",
+            "id": 1000,
+            "count": 0
+          }
+        ]
+      },
+      "time": {
+        "submission": {
+          "set": true,
+          "infinite": false,
+          "number": 1768460400
+        },
+        "start": {
+          "set": true,
+          "infinite": false,
+          "number": 1768460520
+        },
+        "end": {
+          "set": true,
+          "infinite": false,
+          "number": 1768462920
+        },
+        "elapsed": {
+          "set": true,
+          "infinite": false,
+          "number": 2400
+        },
+        "limit": {
+          "set": true,
+          "infinite": false,
+          "number": 120
+        }
+      },
+      "paths": {
+        "working_directory": "/home/researcher/work/preprocess",
+        "standard_output": "/home/researcher/logs/11998.out",
+        "standard_error": "/home/researcher/logs/11998.err"
+      },
+      "command": "/home/researcher/bin/preprocess",
+      "exit_code": {
+        "return_code": {
+          "set": true,
+          "number": 0
+        },
+        "signal": {
+          "id": 0,
+          "name": ""
+        },
+        "status": [
+          "SUCCESS"
+        ]
+      }
+    },
+    {
+      "job_id": "11998.batch",
+      "name": "batch",
+      "user": "researcher",
+      "partition": "compute",
+      "state": {
+        "current": [
+          "COMPLETED"
+        ],
+        "reason": "None"
+      },
+      "accounting": {
+        "elapsed_cpu_seconds": 17280,
+        "max_rss_mb": 12288,
+        "consumed_energy_joules": 540000
+      },
+      "time": {
+        "end": {
+          "set": true,
+          "number": 1768462920
+        }
+      }
+    }
+  ]
+}

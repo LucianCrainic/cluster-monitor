@@ -1,0 +1,3268 @@
+{
+  "components": {
+    "schemas": {
+      "AccountingInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "consumed_energy_joules": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumed Energy Joules"
+          },
+          "elapsed_cpu_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Cpu Seconds"
+          },
+          "max_rss_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rss Mb"
+          }
+        },
+        "title": "AccountingInfo",
+        "type": "object"
+      },
+      "ApiError": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Id"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiError",
+        "type": "object"
+      },
+      "ApiErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ApiErrorResponse",
+        "type": "object"
+      },
+      "BackendType": {
+        "enum": [
+          "mock",
+          "ssh"
+        ],
+        "title": "BackendType",
+        "type": "string"
+      },
+      "ClientSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "default_cluster_id": {
+            "title": "Default Cluster Id",
+            "type": "string"
+          },
+          "refresh": {
+            "$ref": "#/components/schemas/RefreshSettings"
+          }
+        },
+        "required": [
+          "refresh",
+          "default_cluster_id"
+        ],
+        "title": "ClientSettings",
+        "type": "object"
+      },
+      "Cluster": {
+        "additionalProperties": false,
+        "properties": {
+          "backend": {
+            "$ref": "#/components/schemas/BackendType"
+          },
+          "connection_status": {
+            "$ref": "#/components/schemas/ConnectionStatus"
+          },
+          "file_browser_enabled": {
+            "default": false,
+            "title": "File Browser Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job_actions_enabled": {
+            "default": false,
+            "title": "Job Actions Enabled",
+            "type": "boolean"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_successful_refresh": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful Refresh"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slurm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slurm Version"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "backend",
+          "connection_status"
+        ],
+        "title": "Cluster",
+        "type": "object"
+      },
+      "ClusterOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "allocated_nodes": {
+            "minimum": 0.0,
+            "title": "Allocated Nodes",
+            "type": "integer"
+          },
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "connection_status": {
+            "$ref": "#/components/schemas/ConnectionStatus"
+          },
+          "idle_nodes": {
+            "minimum": 0.0,
+            "title": "Idle Nodes",
+            "type": "integer"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_refresh": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refresh"
+          },
+          "pending_jobs": {
+            "minimum": 0.0,
+            "title": "Pending Jobs",
+            "type": "integer"
+          },
+          "running_jobs": {
+            "minimum": 0.0,
+            "title": "Running Jobs",
+            "type": "integer"
+          },
+          "slurm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slurm Version"
+          },
+          "total_nodes": {
+            "minimum": 0.0,
+            "title": "Total Nodes",
+            "type": "integer"
+          },
+          "unavailable_nodes": {
+            "minimum": 0.0,
+            "title": "Unavailable Nodes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "connection_status",
+          "total_nodes",
+          "idle_nodes",
+          "allocated_nodes",
+          "unavailable_nodes",
+          "running_jobs",
+          "pending_jobs"
+        ],
+        "title": "ClusterOverview",
+        "type": "object"
+      },
+      "ClusterTopology": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TopologyKind"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/Partition"
+            },
+            "title": "Partitions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "kind",
+          "partitions",
+          "nodes",
+          "captured_at"
+        ],
+        "title": "ClusterTopology",
+        "type": "object"
+      },
+      "ConnectionStatus": {
+        "enum": [
+          "connected",
+          "unavailable",
+          "unknown"
+        ],
+        "title": "ConnectionStatus",
+        "type": "string"
+      },
+      "HealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "const": "cluster-monitor",
+            "default": "cluster-monitor",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "Job": {
+        "additionalProperties": false,
+        "properties": {
+          "array_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Array Job Id"
+          },
+          "array_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Array Task Id"
+          },
+          "elapsed_seconds": {
+            "minimum": 0.0,
+            "title": "Elapsed Seconds",
+            "type": "integer"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "heterogeneous_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heterogeneous Job Id"
+          },
+          "heterogeneous_job_offset": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heterogeneous Job Offset"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_name": {
+            "title": "Job Name",
+            "type": "string"
+          },
+          "node_list": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node List",
+            "type": "array"
+          },
+          "nodes": {
+            "minimum": 0.0,
+            "title": "Nodes",
+            "type": "integer"
+          },
+          "partition": {
+            "title": "Partition",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_cpus": {
+            "minimum": 0.0,
+            "title": "Requested Cpus",
+            "type": "integer"
+          },
+          "requested_gpus": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Gpus"
+          },
+          "requested_memory_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Memory Mb"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "state_raw": {
+            "title": "State Raw",
+            "type": "string"
+          },
+          "submit_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Time"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          },
+          "user": {
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "job_name",
+          "user",
+          "partition",
+          "state",
+          "state_raw",
+          "nodes",
+          "requested_cpus",
+          "elapsed_seconds"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JobCancellationReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "const": "cancellation_requested",
+            "default": "cancellation_requested",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "job_id",
+          "requested_at"
+        ],
+        "title": "JobCancellationReceipt",
+        "type": "object"
+      },
+      "JobDetails": {
+        "additionalProperties": false,
+        "properties": {
+          "accounting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccountingInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allocation_details": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Allocation Details",
+            "type": "object"
+          },
+          "array_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Array Job Id"
+          },
+          "array_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Array Task Id"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "elapsed_seconds": {
+            "minimum": 0.0,
+            "title": "Elapsed Seconds",
+            "type": "integer"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "heterogeneous_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heterogeneous Job Id"
+          },
+          "heterogeneous_job_offset": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heterogeneous Job Offset"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_name": {
+            "title": "Job Name",
+            "type": "string"
+          },
+          "node_list": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node List",
+            "type": "array"
+          },
+          "nodes": {
+            "minimum": 0.0,
+            "title": "Nodes",
+            "type": "integer"
+          },
+          "partition": {
+            "title": "Partition",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_cpus": {
+            "minimum": 0.0,
+            "title": "Requested Cpus",
+            "type": "integer"
+          },
+          "requested_gpus": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Gpus"
+          },
+          "requested_memory_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Memory Mb"
+          },
+          "standard_error_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Error Path"
+          },
+          "standard_output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Output Path"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "state_raw": {
+            "title": "State Raw",
+            "type": "string"
+          },
+          "submit_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Time"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          },
+          "user": {
+            "title": "User",
+            "type": "string"
+          },
+          "working_directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working Directory"
+          }
+        },
+        "required": [
+          "job_id",
+          "job_name",
+          "user",
+          "partition",
+          "state",
+          "state_raw",
+          "nodes",
+          "requested_cpus",
+          "elapsed_seconds"
+        ],
+        "title": "JobDetails",
+        "type": "object"
+      },
+      "JobState": {
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed",
+          "cancelled",
+          "timeout",
+          "out_of_memory",
+          "suspended",
+          "unknown"
+        ],
+        "title": "JobState",
+        "type": "string"
+      },
+      "JobSubmissionReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "scheduler_cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduler Cluster"
+          },
+          "status": {
+            "const": "submitted",
+            "default": "submitted",
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "job_id",
+          "submitted_at"
+        ],
+        "title": "JobSubmissionReceipt",
+        "type": "object"
+      },
+      "JobSubmissionRequest": {
+        "additionalProperties": false,
+        "description": "A bounded sbatch script and its scheduler resource request.",
+        "properties": {
+          "cpus_per_task": {
+            "default": 1,
+            "maximum": 1024.0,
+            "minimum": 1.0,
+            "title": "Cpus Per Task",
+            "type": "integer"
+          },
+          "gpus_per_node": {
+            "default": 0,
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Gpus Per Node",
+            "type": "integer"
+          },
+          "job_name": {
+            "title": "Job Name",
+            "type": "string"
+          },
+          "memory_mb": {
+            "anyOf": [
+              {
+                "maximum": 16777216.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Mb"
+          },
+          "nodes": {
+            "default": 1,
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Nodes",
+            "type": "integer"
+          },
+          "partition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partition"
+          },
+          "script": {
+            "maxLength": 131072,
+            "minLength": 2,
+            "title": "Script",
+            "type": "string"
+          },
+          "time_limit_minutes": {
+            "default": 10,
+            "maximum": 525600.0,
+            "minimum": 1.0,
+            "title": "Time Limit Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_name",
+          "script"
+        ],
+        "title": "JobSubmissionRequest",
+        "type": "object"
+      },
+      "Node": {
+        "additionalProperties": false,
+        "properties": {
+          "active_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Features",
+            "type": "array"
+          },
+          "allocated_cpus": {
+            "minimum": 0.0,
+            "title": "Allocated Cpus",
+            "type": "integer"
+          },
+          "allocated_generic_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allocated Generic Resources",
+            "type": "array"
+          },
+          "allocated_memory_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocated Memory Mb"
+          },
+          "configured_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured Features",
+            "type": "array"
+          },
+          "cores_per_socket": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cores Per Socket"
+          },
+          "cpu_count": {
+            "minimum": 0.0,
+            "title": "Cpu Count",
+            "type": "integer"
+          },
+          "cpu_load": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpu Load"
+          },
+          "free_memory_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Memory Mb"
+          },
+          "generic_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Generic Resources",
+            "type": "array"
+          },
+          "gpu_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gpu Resources",
+            "type": "array"
+          },
+          "memory_mb": {
+            "minimum": 0.0,
+            "title": "Memory Mb",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "partition_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Partition Names",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sockets": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sockets"
+          },
+          "state": {
+            "$ref": "#/components/schemas/NodeState"
+          },
+          "state_raw": {
+            "title": "State Raw",
+            "type": "string"
+          },
+          "threads_per_core": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threads Per Core"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "state_raw",
+          "cpu_count",
+          "allocated_cpus",
+          "memory_mb"
+        ],
+        "title": "Node",
+        "type": "object"
+      },
+      "NodeState": {
+        "enum": [
+          "idle",
+          "allocated",
+          "mixed",
+          "drained",
+          "down",
+          "completing",
+          "unknown"
+        ],
+        "title": "NodeState",
+        "type": "string"
+      },
+      "Partition": {
+        "additionalProperties": false,
+        "properties": {
+          "allocated_node_count": {
+            "minimum": 0.0,
+            "title": "Allocated Node Count",
+            "type": "integer"
+          },
+          "availability": {
+            "title": "Availability",
+            "type": "boolean"
+          },
+          "default_memory_mb_per_cpu": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Memory Mb Per Cpu"
+          },
+          "default_memory_mb_per_node": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Memory Mb Per Node"
+          },
+          "idle_node_count": {
+            "minimum": 0.0,
+            "title": "Idle Node Count",
+            "type": "integer"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "maximum_cpus_per_node": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Cpus Per Node"
+          },
+          "maximum_nodes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Nodes"
+          },
+          "maximum_time_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Time Minutes"
+          },
+          "minimum_nodes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Nodes"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_count": {
+            "minimum": 0.0,
+            "title": "Node Count",
+            "type": "integer"
+          },
+          "node_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Names",
+            "type": "array"
+          },
+          "other_node_count": {
+            "minimum": 0.0,
+            "title": "Other Node Count",
+            "type": "integer"
+          },
+          "qos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Qos",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "time_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit"
+          }
+        },
+        "required": [
+          "name",
+          "availability",
+          "state",
+          "node_count",
+          "allocated_node_count",
+          "idle_node_count",
+          "other_node_count"
+        ],
+        "title": "Partition",
+        "type": "object"
+      },
+      "RefreshSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "history_seconds": {
+            "default": 60,
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "History Seconds",
+            "type": "integer"
+          },
+          "jobs_seconds": {
+            "default": 10,
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Jobs Seconds",
+            "type": "integer"
+          },
+          "nodes_seconds": {
+            "default": 30,
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Nodes Seconds",
+            "type": "integer"
+          },
+          "overview_seconds": {
+            "default": 10,
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Overview Seconds",
+            "type": "integer"
+          },
+          "partitions_seconds": {
+            "default": 30,
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Partitions Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "RefreshSettings",
+        "type": "object"
+      },
+      "RemoteDirectory": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RemoteFileEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "parent_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Path"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "path",
+          "parent_path",
+          "entries"
+        ],
+        "title": "RemoteDirectory",
+        "type": "object"
+      },
+      "RemoteDirectoryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "show_hidden": {
+            "default": false,
+            "title": "Show Hidden",
+            "type": "boolean"
+          }
+        },
+        "title": "RemoteDirectoryRequest",
+        "type": "object"
+      },
+      "RemoteFileEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RemoteFileKind"
+          },
+          "modified_at": {
+            "format": "date-time",
+            "title": "Modified At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permissions": {
+            "title": "Permissions",
+            "type": "string"
+          },
+          "readable": {
+            "title": "Readable",
+            "type": "boolean"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "symlink_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symlink Target"
+          },
+          "target_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RemoteFileKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "kind",
+          "size_bytes",
+          "modified_at",
+          "permissions",
+          "readable"
+        ],
+        "title": "RemoteFileEntry",
+        "type": "object"
+      },
+      "RemoteFileKind": {
+        "enum": [
+          "file",
+          "directory",
+          "symlink",
+          "other"
+        ],
+        "title": "RemoteFileKind",
+        "type": "string"
+      },
+      "RemoteFilePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RemoteFileKind"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "modified_at": {
+            "format": "date-time",
+            "title": "Modified At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permissions": {
+            "title": "Permissions",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RemotePreviewStatus"
+          },
+          "symlink_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symlink Target"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "path",
+          "name",
+          "kind",
+          "size_bytes",
+          "modified_at",
+          "permissions",
+          "status"
+        ],
+        "title": "RemoteFilePreview",
+        "type": "object"
+      },
+      "RemoteFilePreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "RemoteFilePreviewRequest",
+        "type": "object"
+      },
+      "RemotePreviewStatus": {
+        "enum": [
+          "available",
+          "binary",
+          "too_large",
+          "special"
+        ],
+        "title": "RemotePreviewStatus",
+        "type": "string"
+      },
+      "TopologyGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "child_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Child Group Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TopologyGroupKind"
+          },
+          "link_speed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Speed"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "TopologyGroup",
+        "type": "object"
+      },
+      "TopologyGroupKind": {
+        "enum": [
+          "switch",
+          "block",
+          "ring"
+        ],
+        "title": "TopologyGroupKind",
+        "type": "string"
+      },
+      "TopologyKind": {
+        "enum": [
+          "flat",
+          "tree",
+          "block",
+          "ring",
+          "unknown"
+        ],
+        "title": "TopologyKind",
+        "type": "string"
+      }
+    }
+  },
+  "info": {
+    "summary": "Local Slurm monitoring API with guarded job actions",
+    "title": "cluster-monitor API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/clusters": {
+      "get": {
+        "operationId": "list_clusters_api_clusters_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Cluster"
+                  },
+                  "title": "Response List Clusters Api Clusters Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "List Clusters"
+      }
+    },
+    "/api/clusters/{cluster_id}": {
+      "get": {
+        "operationId": "get_cluster_api_clusters__cluster_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cluster"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Cluster"
+      }
+    },
+    "/api/clusters/{cluster_id}/files/list": {
+      "post": {
+        "operationId": "list_remote_directory_api_clusters__cluster_id__files_list_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoteDirectoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteDirectory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "List Remote Directory"
+      }
+    },
+    "/api/clusters/{cluster_id}/files/preview": {
+      "post": {
+        "operationId": "preview_remote_file_api_clusters__cluster_id__files_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoteFilePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteFilePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Preview Remote File"
+      }
+    },
+    "/api/clusters/{cluster_id}/history": {
+      "get": {
+        "operationId": "get_history_api_clusters__cluster_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobState"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "partition",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Partition"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,127}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  },
+                  "title": "Response Get History Api Clusters  Cluster Id  History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get History"
+      }
+    },
+    "/api/clusters/{cluster_id}/jobs": {
+      "get": {
+        "operationId": "get_jobs_api_clusters__cluster_id__jobs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobState"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "partition",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Partition"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,127}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  },
+                  "title": "Response Get Jobs Api Clusters  Cluster Id  Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Jobs"
+      },
+      "post": {
+        "operationId": "submit_job_api_clusters__cluster_id__jobs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Cluster-Monitor-Action",
+            "required": true,
+            "schema": {
+              "const": "confirmed",
+              "title": "X-Cluster-Monitor-Action",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSubmissionReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Submit Job"
+      }
+    },
+    "/api/clusters/{cluster_id}/jobs/{job_id}": {
+      "delete": {
+        "operationId": "cancel_job_api_clusters__cluster_id__jobs__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[1-9][0-9]*$",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Cluster-Monitor-Action",
+            "required": true,
+            "schema": {
+              "const": "confirmed",
+              "title": "X-Cluster-Monitor-Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancellationReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Cancel Job"
+      },
+      "get": {
+        "operationId": "get_job_api_clusters__cluster_id__jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.+\\-]+$",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetails"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Job"
+      }
+    },
+    "/api/clusters/{cluster_id}/jobs/{job_id}/logs/stream": {
+      "get": {
+        "operationId": "stream_job_logs_api_clusters__cluster_id__jobs__job_id__logs_stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[1-9][0-9]*(?:_[0-9]+)?$",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Path-free Server-Sent Events carrying job output."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Stream Job Logs"
+      }
+    },
+    "/api/clusters/{cluster_id}/nodes": {
+      "get": {
+        "operationId": "get_nodes_api_clusters__cluster_id__nodes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NodeState"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "partition",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Partition"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Node"
+                  },
+                  "title": "Response Get Nodes Api Clusters  Cluster Id  Nodes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Nodes"
+      }
+    },
+    "/api/clusters/{cluster_id}/overview": {
+      "get": {
+        "operationId": "get_overview_api_clusters__cluster_id__overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Overview"
+      }
+    },
+    "/api/clusters/{cluster_id}/partitions": {
+      "get": {
+        "operationId": "get_partitions_api_clusters__cluster_id__partitions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Partition"
+                  },
+                  "title": "Response Get Partitions Api Clusters  Cluster Id  Partitions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Partitions"
+      }
+    },
+    "/api/clusters/{cluster_id}/topology": {
+      "get": {
+        "operationId": "get_topology_api_clusters__cluster_id__topology_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterTopology"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Topology"
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "settings_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Settings"
+      }
+    }
+  }
+}

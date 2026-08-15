@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "data_parser/v0.0.41"
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "sinfo": [
+    {
+      "partition": {
+        "name": "compute*",
+        "state": [
+          "UP"
+        ]
+      },
+      "maximums": {
+        "time": {
+          "set": true,
+          "infinite": false,
+          "number": 2880
+        }
+      },
+      "nodes": {
+        "total": 4,
+        "allocation": {
+          "allocated": 1,
+          "idle": 2,
+          "other": 1,
+          "total": 4
+        }
+      }
+    },
+    {
+      "partition": {
+        "name": "gpu",
+        "state": "DRAIN"
+      },
+      "maximums": {
+        "time": {
+          "set": true,
+          "infinite": true,
+          "number": 0
+        }
+      },
+      "nodes": {
+        "allocation": {
+          "allocated": 1,
+          "idle": 0,
+          "other": 1,
+          "total": 2
+        }
+      }
+    }
+  ],
+  "nodes": {
+    "nodes": [
+      {
+        "name": "cpu001",
+        "partitions": [
+          "compute"
+        ],
+        "state": [
+          "IDLE"
+        ],
+        "cpus": {
+          "total": 64,
+          "allocated": 0
+        },
+        "memory": {
+          "maximum": 262144,
+          "allocated": 0
+        },
+        "gres": {
+          "total": [],
+          "used": []
+        },
+        "reason": {
+          "description": ""
+        }
+      },
+      {
+        "name": "gpu001",
+        "partitions": [
+          "compute",
+          "gpu"
+        ],
+        "state": [
+          "MIXED"
+        ],
+        "cpus": {
+          "total": {
+            "set": true,
+            "infinite": false,
+            "number": 64
+          },
+          "allocated": {
+            "set": true,
+            "infinite": false,
+            "number": 32
+          }
+        },
+        "memory": {
+          "maximum": 524288,
+          "allocated": 262144
+        },
+        "gres": {
+          "total": [
+            {
+              "type": "gres",
+              "name": "gpu:a100",
+              "id": 1001,
+              "count": 4
+            }
+          ],
+          "used": [
+            {
+              "type": "gres",
+              "name": "gpu:a100",
+              "id": 1001,
+              "count": 2
+            }
+          ]
+        },
+        "reason": {
+          "description": null
+        }
+      },
+      {
+        "name": "cpu003",
+        "partitions": "compute",
+        "state": [
+          "IDLE",
+          "DRAIN"
+        ],
+        "cpus": {
+          "total": 64,
+          "allocated": 0
+        },
+        "memory": {
+          "maximum": 262144,
+          "allocated": {
+            "set": false,
+            "infinite": false,
+            "number": 0
+          }
+        },
+        "gres": {
+          "total": "(null)",
+          "used": "(null)"
+        },
+        "reason": {
+          "description": "Scheduled hardware maintenance"
+        }
+      }
+    ]
+  }
+}

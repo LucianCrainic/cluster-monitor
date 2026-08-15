@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "data_parser/v0.0.42"
+    }
+  },
+  "errors": [],
+  "jobs": [
+    {
+      "job_id": {
+        "set": true,
+        "infinite": false,
+        "number": 42000
+      },
+      "array_job_id": {
+        "set": true,
+        "infinite": false,
+        "number": 42000
+      },
+      "array_task_id": {
+        "set": false,
+        "infinite": false,
+        "number": 4294967294
+      },
+      "array_task_string": "1-128%8",
+      "het_job_id": {
+        "set": false,
+        "infinite": false,
+        "number": 4294967294
+      },
+      "het_job_offset": {
+        "set": false,
+        "infinite": false,
+        "number": 4294967294
+      },
+      "name": "parameter-sweep",
+      "user_name": "researcher",
+      "partition": "compute",
+      "job_state": [
+        "PENDING"
+      ],
+      "state_reason": "Priority",
+      "node_count": 1,
+      "nodes": "(null)",
+      "cpus": {
+        "set": true,
+        "infinite": false,
+        "number": 2
+      },
+      "required": {
+        "memory_per_node": {
+          "set": true,
+          "infinite": false,
+          "number": 2048
+        }
+      }
+    },
+    {
+      "job_id": {
+        "set": true,
+        "infinite": false,
+        "number": 43000
+      },
+      "array_job_id": {
+        "set": false,
+        "infinite": false,
+        "number": 4294967294
+      },
+      "array_task_id": {
+        "set": false,
+        "infinite": false,
+        "number": 4294967294
+      },
+      "array_task_string": "",
+      "het_job_id": {
+        "set": true,
+        "infinite": false,
+        "number": 43000
+      },
+      "het_job_offset": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "het_job_id_set": "43000+0,43001+1",
+      "name": "coupled-workflow",
+      "user_name": "researcher",
+      "partition": "compute",
+      "job_state": [
+        "RUNNING"
+      ],
+      "state_reason": "None",
+      "node_count": 1,
+      "nodes": "cpu001",
+      "cpus": {
+        "set": true,
+        "infinite": false,
+        "number": 4
+      }
+    }
+  ]
+}

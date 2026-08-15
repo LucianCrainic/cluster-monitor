@@ -1,0 +1,21 @@
+repos:
+  - repo: local
+    hooks:
+      - id: backend-ruff
+        name: backend ruff
+        entry: bash -c 'cd backend && uv run --extra dev ruff check .'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+      - id: backend-format
+        name: backend ruff format
+        entry: bash -c 'cd backend && uv run --extra dev ruff format --check .'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+      - id: frontend-lint
+        name: frontend eslint
+        entry: npm --prefix frontend run lint
+        language: system
+        files: ^frontend/
+        pass_filenames: false
