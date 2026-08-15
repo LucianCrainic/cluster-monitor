@@ -12,8 +12,33 @@ from cluster_monitor.models.job_actions import (
     JobSubmissionReceipt,
     JobSubmissionRequest,
 )
+from cluster_monitor.models.job_logs import (
+    JobLogChunkEvent,
+    JobLogCompleteEvent,
+    JobLogErrorEvent,
+    JobLogEvent,
+    JobLogMetadataEvent,
+    JobLogSession,
+    JobLogSource,
+    JobLogStatusEvent,
+)
 from cluster_monitor.models.node import Node, NodeState, Partition
+from cluster_monitor.models.remote_files import (
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFileEntry,
+    RemoteFileKind,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
+    RemotePreviewStatus,
+)
 from cluster_monitor.models.settings import ClientSettings, RefreshSettings
+from cluster_monitor.models.topology import (
+    ClusterTopology,
+    TopologyGroup,
+    TopologyGroupKind,
+    TopologyKind,
+)
 
 __all__ = [
     "AccountingInfo",
@@ -21,10 +46,19 @@ __all__ = [
     "ClientSettings",
     "Cluster",
     "ClusterOverview",
+    "ClusterTopology",
     "ConnectionStatus",
     "Job",
     "JobCancellationReceipt",
     "JobDetails",
+    "JobLogChunkEvent",
+    "JobLogCompleteEvent",
+    "JobLogErrorEvent",
+    "JobLogEvent",
+    "JobLogMetadataEvent",
+    "JobLogSession",
+    "JobLogSource",
+    "JobLogStatusEvent",
     "JobState",
     "JobSubmissionReceipt",
     "JobSubmissionRequest",
@@ -32,4 +66,14 @@ __all__ = [
     "NodeState",
     "Partition",
     "RefreshSettings",
+    "RemoteDirectory",
+    "RemoteDirectoryRequest",
+    "RemoteFileEntry",
+    "RemoteFileKind",
+    "RemoteFilePreview",
+    "RemoteFilePreviewRequest",
+    "RemotePreviewStatus",
+    "TopologyGroup",
+    "TopologyGroupKind",
+    "TopologyKind",
 ]

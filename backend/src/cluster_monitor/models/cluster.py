@@ -25,6 +25,7 @@ class Cluster(ApiModel):
     backend: BackendType
     connection_status: ConnectionStatus
     job_actions_enabled: bool = False
+    file_browser_enabled: bool = False
     slurm_version: str | None = None
     last_successful_refresh: datetime | None = None
     last_error: str | None = None

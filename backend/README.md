@@ -2,6 +2,10 @@
 
 The local FastAPI service for `cluster-monitor`. It provides normalized Slurm
 monitoring plus opt-in job submission and cancellation.
+It also exposes a read-only Server-Sent Events endpoint for live Slurm job
+stdout and stderr.
+It provides an enriched topology snapshot and explicitly opt-in, read-only
+remote directory listing and UTF-8 text preview endpoints.
 
 ```bash
 uv sync --extra dev
@@ -25,6 +29,26 @@ Mutation timeouts and dropped SSH connections are reported as uncertain
 outcomes and are never retried automatically. SSH output capture is bounded to
 8 MiB per stream and overflow content is discarded. Tests use mock data and
 fake executors; they do not require or modify a real Slurm cluster.
+
+`GET /api/clusters/{cluster_id}/jobs/{job_id}/logs/stream` accepts only an
+allocation or explicit numeric array-task ID. The SSH backend checks the job
+owner against `id -un`, obtains output paths from `scontrol` and expanded
+`sacct` metadata, and passes each normalized path as one quoted `tail` argument.
+It never accepts a path from the client. Pending jobs wait for Slurm to create
+their files, terminal jobs return a 200-line snapshot, and live jobs use
+`tail --follow=name --retry` until completion or browser disconnect. Log data
+and resolved paths are not written to application logs.
+
+`GET /api/clusters/{cluster_id}/topology` combines rich `scontrol --json`
+partition/node data with live `sinfo` allocation counts and the optional output
+of `scontrol show topology`. Empty or unsupported physical topology falls back
+to a flat partition/resource map.
+
+The two `POST /api/clusters/{cluster_id}/files/*` routes require
+`allow_file_browsing: true`. Paths appear only in JSON bodies and are passed as
+one SSH argument to a static isolated helper. The helper has no write operation,
+caps listings at 500 entries, and previews only valid UTF-8 ordinary files up
+to 1 MiB. Responses are marked `Cache-Control: no-store`.
 
 ```bash
 uv run pytest

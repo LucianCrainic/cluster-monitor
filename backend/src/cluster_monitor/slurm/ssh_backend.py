@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import codecs
 import re
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from pydantic import ValidationError
 
@@ -24,11 +26,17 @@ from cluster_monitor.connection import (
 from cluster_monitor.exceptions import (
     ClusterMonitorError,
     ClusterUnavailableError,
+    FileBrowsingDisabledError,
     JobActionForbiddenError,
     JobActionRejectedError,
     JobActionScopeUnsupportedError,
     JobActionsDisabledError,
     JobActionUncertainError,
+    JobLogAccessForbiddenError,
+    JobLogIdentifierUnsupportedError,
+    JobLogScopeAmbiguousError,
+    JobLogScopeUnsupportedError,
+    JobLogUnavailableError,
     JobNotFoundError,
 )
 from cluster_monitor.logging import get_logger
@@ -36,16 +44,29 @@ from cluster_monitor.models import (
     BackendType,
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     ConnectionStatus,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogChunkEvent,
+    JobLogCompleteEvent,
+    JobLogErrorEvent,
+    JobLogEvent,
+    JobLogMetadataEvent,
+    JobLogSession,
+    JobLogSource,
+    JobLogStatusEvent,
     JobState,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     NodeState,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
 )
 from cluster_monitor.slurm.capabilities import (
     RemoteCommandExecutor,
@@ -55,17 +76,37 @@ from cluster_monitor.slurm.capabilities import (
 )
 from cluster_monitor.slurm.commands import (
     SlurmCommand,
+    build_file_test_command,
     build_nodes_json_command,
     build_nodes_text_command,
     build_partitions_json_command,
     build_partitions_text_command,
+    build_remote_files_command,
     build_remote_user_command,
+    build_sacct_job_logs_text_command,
     build_sacct_json_command,
     build_sacct_text_command,
     build_sbatch_command,
     build_scancel_command,
+    build_scontrol_job_json_command,
+    build_scontrol_job_text_command,
+    build_scontrol_nodes_json_command,
+    build_scontrol_partitions_json_command,
     build_squeue_json_command,
     build_squeue_text_command,
+    build_tail_command,
+    build_topology_command,
+)
+from cluster_monitor.slurm.job_logs import (
+    JobLogMetadata,
+    JobLogMetadataParseError,
+    metadata_from_job_details,
+    overlay_metadata,
+    parse_sacct_job_logs_text,
+    parse_scontrol_job_logs_json,
+    parse_scontrol_job_logs_text,
+    resolve_log_paths,
+    validate_log_job_id,
 )
 from cluster_monitor.slurm.json_parser import (
     SlurmJsonParseError,
@@ -75,6 +116,11 @@ from cluster_monitor.slurm.json_parser import (
     parse_sacct_jobs_json,
     parse_squeue_jobs_json,
 )
+from cluster_monitor.slurm.remote_files import (
+    parse_remote_directory,
+    parse_remote_file_preview,
+    validate_remote_path,
+)
 from cluster_monitor.slurm.text_parser import (
     SlurmTextParseError,
     parse_nodes_text,
@@ -82,11 +128,22 @@ from cluster_monitor.slurm.text_parser import (
     parse_sacct_jobs_text,
     parse_squeue_jobs_text,
 )
+from cluster_monitor.slurm.topology import (
+    SlurmTopologyParseError,
+    build_cluster_topology,
+    overlay_partition_details,
+    parse_topology_text,
+)
 
 logger = get_logger("slurm.ssh_backend")
 
 _REMOTE_USER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,127}$")
 _CACHE_SECONDS = 2.0
+_LOG_INITIAL_LINES = 200
+_LOG_STATUS_POLL_SECONDS = 5.0
+_LOG_FINAL_DRAIN_SECONDS = 1.0
+_LOG_MAX_POLL_FAILURES = 3
+_LOG_QUEUE_CHUNKS = 128
 _T = TypeVar("_T")
 
 
@@ -150,6 +207,7 @@ class SshSlurmBackend:
                 backend=BackendType.SSH,
                 connection_status=ConnectionStatus.UNAVAILABLE,
                 job_actions_enabled=self._config.allow_job_actions,
+                file_browser_enabled=self._config.allow_file_browsing,
                 last_successful_refresh=self._last_successful_refresh,
                 last_error=message,
             )
@@ -160,6 +218,7 @@ class SshSlurmBackend:
             backend=BackendType.SSH,
             connection_status=ConnectionStatus.CONNECTED,
             job_actions_enabled=self._config.allow_job_actions,
+            file_browser_enabled=self._config.allow_file_browsing,
             slurm_version=capabilities.version,
             last_successful_refresh=self._last_successful_refresh,
             last_error=self._last_error,
@@ -221,6 +280,70 @@ class SshSlurmBackend:
 
         return await self._guard(load)
 
+    async def get_topology(self) -> ClusterTopology:
+        async def load() -> ClusterTopology:
+            partitions, nodes = await asyncio.gather(self.get_partitions(), self.get_nodes())
+            physical = parse_topology_text("")
+            try:
+                physical = parse_topology_text(await self._execute(build_topology_command()))
+            except (RemoteCommandError, SlurmTopologyParseError):
+                logger.info(
+                    "slurm_topology_fallback cluster_id=%s",
+                    self._config.id,
+                )
+            captured_at = self._record_success()
+            return build_cluster_topology(
+                self._config.id,
+                partitions,
+                nodes,
+                physical,
+                captured_at,
+            )
+
+        return await self._guard(load)
+
+    async def list_remote_directory(
+        self,
+        request: RemoteDirectoryRequest,
+    ) -> RemoteDirectory:
+        async def load() -> RemoteDirectory:
+            self._require_file_browsing()
+            validate_remote_path(
+                request.path,
+                self._config.id,
+                allow_login_directory=True,
+            )
+            output = await self._execute(
+                build_remote_files_command(
+                    "list",
+                    request.path,
+                    show_hidden=request.show_hidden,
+                )
+            )
+            directory = parse_remote_directory(output, self._config.id)
+            self._record_success()
+            return directory
+
+        return await self._guard(load)
+
+    async def preview_remote_file(
+        self,
+        request: RemoteFilePreviewRequest,
+    ) -> RemoteFilePreview:
+        async def load() -> RemoteFilePreview:
+            self._require_file_browsing()
+            validate_remote_path(
+                request.path,
+                self._config.id,
+                allow_login_directory=False,
+            )
+            output = await self._execute(build_remote_files_command("preview", request.path))
+            preview = parse_remote_file_preview(output, self._config.id)
+            self._record_success()
+            return preview
+
+        return await self._guard(load)
+
     async def get_jobs(self, user: str | None = None) -> list[Job]:
         async def load() -> list[Job]:
             selected_user = await self._selected_user(user)
@@ -279,6 +402,36 @@ class SshSlurmBackend:
 
             self._record_success()
             return details
+
+        return await self._guard(load)
+
+    async def open_job_log_stream(self, job_id: str) -> JobLogSession:
+        """Resolve and authorize log files before sending SSE response headers."""
+
+        try:
+            validate_log_job_id(job_id)
+        except ValueError:
+            raise JobLogIdentifierUnsupportedError(self._config.id, job_id) from None
+
+        async def load() -> JobLogSession:
+            remote_user = await self._get_remote_user()
+            metadata = await self._resolve_job_log_metadata(job_id, remote_user)
+            if metadata.user != remote_user:
+                raise JobLogAccessForbiddenError(self._config.id, job_id)
+            if metadata.ambiguous_array_leader:
+                raise JobLogScopeAmbiguousError(self._config.id, job_id)
+            if metadata.heterogeneous_job_id is not None:
+                raise JobLogScopeUnsupportedError(self._config.id, job_id)
+            try:
+                paths = resolve_log_paths(metadata)
+            except JobLogMetadataParseError as exc:
+                raise JobLogUnavailableError(self._config.id, job_id, str(exc)) from None
+            if metadata.terminal:
+                paths = await self._ready_log_paths(paths)
+                if not paths:
+                    raise JobLogUnavailableError(self._config.id, job_id)
+            self._record_success()
+            return JobLogSession(events=self._stream_job_log_events(metadata, remote_user))
 
         return await self._guard(load)
 
@@ -425,6 +578,9 @@ class SshSlurmBackend:
             return requested_user
         if self._config.slurm_user != "current":
             return self._config.slurm_user
+        return await self._get_remote_user()
+
+    async def _get_remote_user(self) -> str:
         if self._remote_user is not None:
             return self._remote_user
 
@@ -436,19 +592,406 @@ class SshSlurmBackend:
                 self._remote_user = output
             return self._remote_user
 
+    async def _resolve_job_log_metadata(
+        self,
+        job_id: str,
+        remote_user: str,
+    ) -> JobLogMetadata:
+        """Resolve live state with scontrol and expanded paths with sacct."""
+
+        primary: JobLogMetadata | None = None
+        try:
+            primary = parse_scontrol_job_logs_json(
+                await self._execute(build_scontrol_job_json_command(job_id)),
+                job_id,
+            )
+        except (RemoteCommandError, JobLogMetadataParseError):
+            logger.info(
+                "slurm_log_metadata_fallback cluster_id=%s command_type=scontrol_job_logs_json",
+                self._config.id,
+            )
+        if primary is None:
+            with suppress(RemoteCommandError, JobLogMetadataParseError):
+                primary = parse_scontrol_job_logs_text(
+                    await self._execute(build_scontrol_job_text_command(job_id)),
+                    job_id,
+                )
+
+        expanded: JobLogMetadata | None = None
+        capabilities = await self._get_capabilities()
+        if capabilities.sacct_json:
+            try:
+                details = parse_sacct_job_details_json(
+                    await self._execute(
+                        build_sacct_json_command(
+                            remote_user,
+                            job_id=job_id,
+                            expand_patterns=True,
+                        )
+                    ),
+                    job_id,
+                )
+                if details is not None:
+                    expanded = metadata_from_job_details(details)
+            except (RemoteCommandError, SlurmJsonParseError):
+                logger.info(
+                    "slurm_log_metadata_fallback cluster_id=%s command_type=sacct_job_logs_json",
+                    self._config.id,
+                )
+        if expanded is None:
+            with suppress(RemoteCommandError, JobLogMetadataParseError):
+                expanded = parse_sacct_job_logs_text(
+                    await self._execute(build_sacct_job_logs_text_command(remote_user, job_id)),
+                    job_id,
+                )
+
+        if primary is not None and expanded is not None:
+            return overlay_metadata(primary, expanded)
+        if primary is not None:
+            return primary
+        if expanded is not None:
+            return expanded
+        raise JobNotFoundError(self._config.id, job_id)
+
+    async def _stream_job_log_events(
+        self,
+        metadata: JobLogMetadata,
+        remote_user: str,
+    ) -> AsyncIterator[JobLogEvent]:
+        sequence = 0
+        current = metadata
+        try:
+            paths = resolve_log_paths(current)
+        except JobLogMetadataParseError as exc:
+            yield JobLogErrorEvent(
+                code="job_log_unavailable",
+                message=str(exc),
+                retryable=False,
+            )
+            yield JobLogCompleteEvent(reason="unavailable")
+            return
+
+        if current.terminal:
+            ready = await self._ready_log_paths(paths)
+            if not ready:
+                yield JobLogErrorEvent(
+                    code="job_log_unavailable",
+                    message="The job output files are no longer readable.",
+                    retryable=False,
+                )
+                yield JobLogCompleteEvent(reason="unavailable")
+                return
+            yield self._metadata_event(current, ready)
+            yield JobLogStatusEvent(
+                status="finalizing",
+                message="Loading the final job output.",
+            )
+            snapshot_failed = False
+            async for event in self._stream_log_snapshot(ready, sequence):
+                if isinstance(event, JobLogChunkEvent):
+                    sequence = event.sequence
+                elif isinstance(event, JobLogErrorEvent):
+                    snapshot_failed = True
+                yield event
+            yield JobLogCompleteEvent(
+                reason="unavailable" if snapshot_failed else "snapshot_complete"
+            )
+            return
+
+        yield self._metadata_event(current, paths)
+        waiting_sent = False
+        failures = 0
+        while True:
+            ready = await self._ready_log_paths(paths)
+            if paths and len(ready) == len(paths):
+                break
+            if not waiting_sent:
+                yield JobLogStatusEvent(
+                    status="waiting",
+                    message="Waiting for Slurm to create the job output files.",
+                )
+                waiting_sent = True
+            await asyncio.sleep(_LOG_STATUS_POLL_SECONDS)
+            try:
+                current = await self._resolve_job_log_metadata(current.job_id, remote_user)
+                failures = 0
+                paths = resolve_log_paths(current)
+            except (ClusterMonitorError, JobLogMetadataParseError):
+                failures += 1
+                if failures >= _LOG_MAX_POLL_FAILURES:
+                    yield JobLogErrorEvent(
+                        code="job_log_metadata_unavailable",
+                        message="The job state could not be refreshed.",
+                        retryable=True,
+                    )
+                    yield JobLogCompleteEvent(reason="unavailable")
+                    return
+                continue
+            if current.terminal:
+                ready = await self._ready_log_paths(paths)
+                if not ready:
+                    yield JobLogErrorEvent(
+                        code="job_log_unavailable",
+                        message="The job finished without creating a readable output file.",
+                        retryable=False,
+                    )
+                    yield JobLogCompleteEvent(reason="unavailable")
+                    return
+                yield self._metadata_event(current, ready)
+                yield JobLogStatusEvent(
+                    status="finalizing",
+                    message="Loading the final job output.",
+                )
+                snapshot_failed = False
+                async for event in self._stream_log_snapshot(ready, sequence):
+                    if isinstance(event, JobLogChunkEvent):
+                        sequence = event.sequence
+                    elif isinstance(event, JobLogErrorEvent):
+                        snapshot_failed = True
+                    yield event
+                yield JobLogCompleteEvent(
+                    reason="unavailable" if snapshot_failed else "job_finished"
+                )
+                return
+
+        yield self._metadata_event(current, paths)
+        yield JobLogStatusEvent(status="live", message="Following live job output.")
+        async for event in self._follow_log_paths(paths, current, remote_user, sequence):
+            yield event
+
+    def _metadata_event(
+        self,
+        metadata: JobLogMetadata,
+        paths: dict[str, str],
+    ) -> JobLogMetadataEvent:
+        return JobLogMetadataEvent(
+            job_id=metadata.job_id,
+            state=metadata.state,
+            sources=cast(list[JobLogSource], list(paths)),
+            initial_lines=_LOG_INITIAL_LINES,
+        )
+
+    async def _stream_log_snapshot(
+        self,
+        paths: dict[str, str],
+        sequence: int,
+    ) -> AsyncIterator[JobLogEvent]:
+        for source, path in paths.items():
+            command = build_tail_command(path, initial_lines=_LOG_INITIAL_LINES, follow=False)
+            try:
+                async with self._remote_stream(command) as stream:
+                    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+                    async for chunk in stream:
+                        text = decoder.decode(chunk)
+                        if text:
+                            sequence += 1
+                            yield JobLogChunkEvent(
+                                source=cast(JobLogSource, source),
+                                sequence=sequence,
+                                text=text,
+                            )
+                    final_text = decoder.decode(b"", final=True)
+                    if final_text:
+                        sequence += 1
+                        yield JobLogChunkEvent(
+                            source=cast(JobLogSource, source),
+                            sequence=sequence,
+                            text=final_text,
+                        )
+            except (ClusterConnectionError, RemoteCommandError):
+                yield JobLogErrorEvent(
+                    code="job_log_stream_failed",
+                    message="A remote log file could not be read.",
+                    retryable=True,
+                )
+
+    async def _follow_log_paths(
+        self,
+        paths: dict[str, str],
+        metadata: JobLogMetadata,
+        remote_user: str,
+        sequence: int,
+    ) -> AsyncIterator[JobLogEvent]:
+        queue: asyncio.Queue[tuple[str, str | None, object | None]] = asyncio.Queue(
+            maxsize=_LOG_QUEUE_CHUNKS
+        )
+
+        async def read_source(source: str, stream: AsyncIterator[bytes]) -> None:
+            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+            try:
+                async for chunk in stream:
+                    text = decoder.decode(chunk)
+                    if text:
+                        await queue.put(("chunk", source, text))
+                final_text = decoder.decode(b"", final=True)
+                if final_text:
+                    await queue.put(("chunk", source, final_text))
+                await queue.put(("done", source, None))
+            except Exception as exc:
+                await queue.put(("reader_error", source, exc))
+
+        async def poll_state() -> None:
+            failures = 0
+            while True:
+                await asyncio.sleep(_LOG_STATUS_POLL_SECONDS)
+                try:
+                    latest = await self._resolve_job_log_metadata(metadata.job_id, remote_user)
+                    failures = 0
+                except Exception:
+                    failures += 1
+                    if failures >= _LOG_MAX_POLL_FAILURES:
+                        await queue.put(("poll_error", None, None))
+                        return
+                    continue
+                if latest.terminal:
+                    await queue.put(("terminal", None, None))
+                    return
+
+        reader_tasks: list[asyncio.Task[None]] = []
+        poll_task: asyncio.Task[None] | None = None
+        async with AsyncExitStack() as stack:
+            try:
+                for source, path in paths.items():
+                    command = build_tail_command(
+                        path,
+                        initial_lines=_LOG_INITIAL_LINES,
+                        follow=True,
+                    )
+                    stream = await stack.enter_async_context(self._remote_stream(command))
+                    reader_tasks.append(asyncio.create_task(read_source(source, stream)))
+                poll_task = asyncio.create_task(poll_state())
+                done_sources: set[str] = set()
+                while True:
+                    kind, queue_source, payload = await queue.get()
+                    if kind == "chunk":
+                        sequence += 1
+                        yield JobLogChunkEvent(
+                            source=cast(JobLogSource, queue_source),
+                            sequence=sequence,
+                            text=cast(str, payload),
+                        )
+                        continue
+                    if kind == "done" and queue_source is not None:
+                        done_sources.add(queue_source)
+                        if len(done_sources) < len(paths):
+                            continue
+                    if kind == "terminal":
+                        yield JobLogStatusEvent(
+                            status="finalizing",
+                            message="The job finished; collecting final output.",
+                        )
+                        deadline = asyncio.get_running_loop().time() + _LOG_FINAL_DRAIN_SECONDS
+                        while True:
+                            remaining = deadline - asyncio.get_running_loop().time()
+                            if remaining <= 0:
+                                break
+                            try:
+                                queued_kind, queued_source, queued_payload = await asyncio.wait_for(
+                                    queue.get(), timeout=remaining
+                                )
+                            except TimeoutError:
+                                break
+                            if queued_kind == "chunk":
+                                sequence += 1
+                                yield JobLogChunkEvent(
+                                    source=cast(JobLogSource, queued_source),
+                                    sequence=sequence,
+                                    text=cast(str, queued_payload),
+                                )
+                        yield JobLogCompleteEvent(reason="job_finished")
+                        return
+                    code = (
+                        "job_log_metadata_unavailable"
+                        if kind == "poll_error"
+                        else "job_log_stream_failed"
+                    )
+                    yield JobLogErrorEvent(
+                        code=code,
+                        message="The live log connection ended unexpectedly.",
+                        retryable=True,
+                    )
+                    yield JobLogCompleteEvent(reason="unavailable")
+                    return
+            finally:
+                tasks = [*reader_tasks, *([poll_task] if poll_task is not None else [])]
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                if tasks:
+                    with suppress(asyncio.CancelledError):
+                        await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _ready_log_paths(self, paths: dict[str, str]) -> dict[str, str]:
+        ready: dict[str, str] = {}
+        for source, path in paths.items():
+            if (
+                await self._remote_file_test(path, "exists")
+                and await self._remote_file_test(path, "regular")
+                and await self._remote_file_test(path, "readable")
+            ):
+                ready[source] = path
+        return ready
+
+    async def _remote_file_test(self, path: str, predicate: str) -> bool:
+        try:
+            await self._execute(build_file_test_command(path, predicate))
+        except RemoteCommandError:
+            return False
+        return True
+
+    def _remote_stream(self, command: SlurmCommand) -> AbstractAsyncContextManager[Any]:
+        stream_method = getattr(self._executor, "stream", None)
+        if not callable(stream_method):
+            raise ValueError("The configured SSH executor does not support streaming.")
+        return cast(
+            AbstractAsyncContextManager[Any],
+            stream_method(
+                command.executable,
+                command.arguments,
+                command_type=command.command_type,
+            ),
+        )
+
     async def _load_partitions(self, capabilities: SlurmCapabilities) -> list[Partition]:
+        summaries: list[Partition]
         if capabilities.sinfo_json:
             try:
-                return parse_partitions_json(await self._execute(build_partitions_json_command()))
+                summaries = parse_partitions_json(
+                    await self._execute(build_partitions_json_command())
+                )
             except (RemoteCommandError, SlurmJsonParseError):
                 logger.info(
                     "slurm_json_fallback cluster_id=%s command_type=sinfo_partitions_json",
                     self._config.id,
                 )
-        return parse_partitions_text(await self._execute(build_partitions_text_command()))
+                summaries = parse_partitions_text(
+                    await self._execute(build_partitions_text_command())
+                )
+        else:
+            summaries = parse_partitions_text(await self._execute(build_partitions_text_command()))
+
+        if capabilities.sinfo_json:
+            try:
+                details = parse_partitions_json(
+                    await self._execute(build_scontrol_partitions_json_command())
+                )
+                return overlay_partition_details(summaries, details)
+            except (RemoteCommandError, SlurmJsonParseError):
+                logger.info(
+                    "slurm_partition_details_unavailable cluster_id=%s",
+                    self._config.id,
+                )
+        return summaries
 
     async def _load_nodes(self, capabilities: SlurmCapabilities) -> list[Node]:
         if capabilities.sinfo_json:
+            try:
+                return parse_nodes_json(await self._execute(build_scontrol_nodes_json_command()))
+            except (RemoteCommandError, SlurmJsonParseError):
+                logger.info(
+                    "slurm_json_fallback cluster_id=%s command_type=scontrol_nodes_json",
+                    self._config.id,
+                )
             try:
                 return parse_nodes_json(await self._execute(build_nodes_json_command()))
             except (RemoteCommandError, SlurmJsonParseError):
@@ -539,6 +1082,10 @@ class SshSlurmBackend:
     def _require_job_actions(self) -> None:
         if not self._config.allow_job_actions:
             raise JobActionsDisabledError(self._config.id)
+
+    def _require_file_browsing(self) -> None:
+        if not self._config.allow_file_browsing:
+            raise FileBrowsingDisabledError(self._config.id)
 
     def _timed(self, value: _T) -> _TimedValue[_T]:
         return _TimedValue(value=value, expires_at=self._clock() + self._cache_ttl_seconds)

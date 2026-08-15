@@ -9,6 +9,7 @@ from cluster_monitor.connection.exceptions import (
 from cluster_monitor.connection.ssh import (
     OpenSshExecutor,
     RemoteCommandOutputLimitError,
+    SshByteStream,
     SshCommandResult,
     build_remote_command,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "RemoteCommandError",
     "RemoteCommandOutputLimitError",
     "RemoteCommandTimeoutError",
+    "SshByteStream",
     "SshCommandError",
     "SshCommandResult",
     "build_remote_command",

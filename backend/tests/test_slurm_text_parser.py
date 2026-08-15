@@ -141,7 +141,7 @@ def test_parses_squeue_fixture() -> None:
 
     configuring = jobs[2]
     assert configuring.state is JobState.PENDING
-    assert configuring.node_list == ["node[01-02,04]"]
+    assert configuring.node_list == ["node01", "node02", "node04"]
     assert configuring.requested_gpus is None
     assert configuring.elapsed_seconds == 93_784
     assert configuring.time_limit_seconds is None
@@ -169,7 +169,7 @@ def test_parses_sacct_fixture_and_ignores_job_steps() -> None:
 
     failed = jobs[1]
     assert failed.state is JobState.OUT_OF_MEMORY
-    assert failed.node_list == ["cpu[001-002]"]
+    assert failed.node_list == ["cpu001", "cpu002"]
     assert failed.requested_memory_mb == 4_096
     assert failed.requested_gpus == 0
     assert failed.elapsed_seconds == 90_000
@@ -265,9 +265,12 @@ def test_parses_gpu_counts(raw: str, expected: int | None) -> None:
     assert parse_slurm_gpu_count(raw) == expected
 
 
-def test_preserves_bracketed_node_ranges_and_resource_topology() -> None:
+def test_expands_bracketed_node_ranges_and_preserves_resource_topology() -> None:
     assert parse_slurm_node_list("cpu[001-003,008],gpu009") == [
-        "cpu[001-003,008]",
+        "cpu001",
+        "cpu002",
+        "cpu003",
+        "cpu008",
         "gpu009",
     ]
     assert parse_slurm_resource_list("gpu:a100:2(S:0,1),mps:100") == [

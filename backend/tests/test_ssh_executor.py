@@ -280,6 +280,45 @@ def test_forwards_bounded_stdin_without_adding_it_to_the_command(
     assert result.stdout == "42001\n"
 
 
+def test_stream_yields_chunks_without_the_command_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = CompletedProcess(0, stdout=b"first\nsecond\n")
+    arguments, options = _install_process(monkeypatch, process)
+    executor = OpenSshExecutor("hpc-alias", timeout_seconds=0.001)
+
+    async def exercise() -> bytes:
+        chunks: list[bytes] = []
+        async with executor.stream(
+            "tail",
+            ("--lines=200", "--", "/logs/a b.out"),
+            command_type="job_log_tail",
+        ) as stream:
+            async for chunk in stream:
+                chunks.append(chunk)
+        return b"".join(chunks)
+
+    assert asyncio.run(exercise()) == b"first\nsecond\n"
+    assert options["stdin"] is asyncio.subprocess.DEVNULL
+    assert arguments[-1] == "tail --lines=200 -- '/logs/a b.out'"
+
+
+def test_leaving_stream_context_terminates_and_drains_ssh_child(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = HangingProcess(stdout_chunks=[b"live output\n"])
+    _install_process(monkeypatch, process)
+    executor = OpenSshExecutor("hpc-alias", terminate_grace_seconds=0.01)
+
+    async def exercise() -> bytes:
+        async with executor.stream("tail", ("--follow=name", "--", "/logs/job.out")) as stream:
+            return await anext(stream)
+
+    assert asyncio.run(exercise()) == b"live output\n"
+    assert process.terminated is True
+    assert process.finished.is_set()
+
+
 def test_rejects_oversized_stdin_before_starting_ssh() -> None:
     executor = OpenSshExecutor("hpc-alias")
 

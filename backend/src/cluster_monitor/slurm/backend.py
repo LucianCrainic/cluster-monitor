@@ -7,13 +7,19 @@ from typing import Protocol, runtime_checkable
 from cluster_monitor.models import (
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogSession,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
 )
 
 
@@ -37,12 +43,28 @@ class SlurmBackend(Protocol):
         """Return normalized node data."""
         ...
 
+    async def get_topology(self) -> ClusterTopology:
+        """Return one coherent resource and optional physical-topology snapshot."""
+        ...
+
+    async def list_remote_directory(self, request: RemoteDirectoryRequest) -> RemoteDirectory:
+        """List one SSH-visible directory without changing remote state."""
+        ...
+
+    async def preview_remote_file(self, request: RemoteFilePreviewRequest) -> RemoteFilePreview:
+        """Preview one bounded UTF-8 regular file without changing remote state."""
+        ...
+
     async def get_jobs(self, user: str | None = None) -> list[Job]:
         """Return active jobs for the selected or configured user."""
         ...
 
     async def get_job(self, job_id: str) -> JobDetails:
         """Return details for one active or recent job."""
+        ...
+
+    async def open_job_log_stream(self, job_id: str) -> JobLogSession:
+        """Preflight and open one read-only stream of job-log events."""
         ...
 
     async def get_recent_jobs(

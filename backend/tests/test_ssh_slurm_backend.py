@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+import json
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -15,16 +17,23 @@ from cluster_monitor.connection import (
     SshCommandResult,
 )
 from cluster_monitor.exceptions import (
+    FileBrowsingDisabledError,
     JobActionRejectedError,
     JobActionScopeUnsupportedError,
     JobActionsDisabledError,
     JobActionUncertainError,
+    JobLogAccessForbiddenError,
 )
 from cluster_monitor.models import (
     BackendType,
     ConnectionStatus,
+    JobLogEvent,
+    JobLogMetadataEvent,
     JobSubmissionRequest,
     NodeState,
+    RemoteDirectoryRequest,
+    RemoteFilePreviewRequest,
+    TopologyKind,
 )
 from cluster_monitor.slurm.ssh_backend import SshSlurmBackend
 
@@ -36,6 +45,8 @@ class FakeExecutor:
         self.responses = responses
         self.calls: list[tuple[str, tuple[str, ...], str | None]] = []
         self.stdin_calls: list[tuple[str | None, bytes | None]] = []
+        self.stream_calls: list[tuple[str, tuple[str, ...], str | None]] = []
+        self.stream_chunks: list[bytes] = [b"first line\n", b"second line\n"]
 
     async def execute(
         self,
@@ -51,6 +62,22 @@ class FakeExecutor:
         if isinstance(response, Exception):
             raise response
         return response
+
+    @asynccontextmanager
+    async def stream(
+        self,
+        remote_executable: str,
+        arguments: Sequence[str] = (),
+        *,
+        command_type: str | None = None,
+    ) -> AsyncIterator[AsyncIterator[bytes]]:
+        self.stream_calls.append((remote_executable, tuple(arguments), command_type))
+
+        async def chunks() -> AsyncIterator[bytes]:
+            for chunk in self.stream_chunks:
+                yield chunk
+
+        yield chunks()
 
 
 def _result(stdout: str) -> SshCommandResult:
@@ -73,6 +100,7 @@ def _config() -> ClusterConfig:
         backend=BackendType.SSH,
         ssh_host="test-hpc",
         allow_job_actions=True,
+        allow_file_browsing=True,
     )
 
 
@@ -87,6 +115,9 @@ def _json_executor() -> FakeExecutor:
             "remote_user": _result("researcher\n"),
             "sinfo_partitions_json": _result(sinfo),
             "sinfo_nodes_json": _result(sinfo),
+            "scontrol_partitions_json": _result(sinfo),
+            "scontrol_nodes_json": _result(sinfo),
+            "scontrol_topology": _result(""),
             "squeue_jobs_json": _result(_fixture("json/squeue_24_11.json")),
             "sacct_jobs_json": _result(_fixture("json/sacct_24_11.json")),
             "sacct_job_json": _result(_fixture("json/sacct_24_11.json")),
@@ -121,8 +152,157 @@ def test_live_backend_normalizes_all_read_operations() -> None:
 
     asyncio.run(exercise())
     assert sum(call[2] == "remote_user" for call in executor.calls) == 1
-    assert sum(call[2] == "sinfo_nodes_json" for call in executor.calls) == 1
+    assert sum(call[2] == "scontrol_nodes_json" for call in executor.calls) == 1
     assert sum(call[2] == "squeue_jobs_json" for call in executor.calls) == 1
+
+
+def test_topology_uses_optional_physical_data_and_flat_fallback() -> None:
+    executor = _json_executor()
+    backend = SshSlurmBackend(_config(), executor=executor)
+
+    topology = asyncio.run(backend.get_topology())
+
+    assert topology.kind is TopologyKind.FLAT
+    assert {partition.name for partition in topology.partitions} == {"compute", "gpu"}
+    assert topology.groups == []
+    assert any(call[2] == "scontrol_topology" for call in executor.calls)
+
+
+def test_remote_files_are_parsed_and_paths_remain_single_argv_values() -> None:
+    executor = _json_executor()
+    selected_path = "/home/researcher/a b;$(touch nope).sh"
+    executor.responses.update(
+        {
+            "remote_files_list": _result(
+                json.dumps(
+                    {
+                        "path": "/home/researcher",
+                        "parent_path": "/home",
+                        "entries": [],
+                        "truncated": False,
+                    }
+                )
+            ),
+            "remote_files_preview": _result(
+                json.dumps(
+                    {
+                        "path": selected_path,
+                        "name": "a b;$(touch nope).sh",
+                        "kind": "file",
+                        "size_bytes": 20,
+                        "modified_at": 1_700_000_000,
+                        "permissions": "-rw-r--r--",
+                        "status": "available",
+                        "content_base64": "IyEvYmluL2Jhc2gKZWNobyBvawo=",
+                    }
+                )
+            ),
+        }
+    )
+    backend = SshSlurmBackend(_config(), executor=executor)
+
+    directory = asyncio.run(backend.list_remote_directory(RemoteDirectoryRequest(show_hidden=True)))
+    preview = asyncio.run(backend.preview_remote_file(RemoteFilePreviewRequest(path=selected_path)))
+
+    assert directory.path == "/home/researcher"
+    assert preview.content == "#!/bin/bash\necho ok\n"
+    preview_call = next(call for call in executor.calls if call[2] == "remote_files_preview")
+    assert preview_call[0] == "python3"
+    assert preview_call[1][-3:] == ("preview", selected_path, "0")
+    assert selected_path not in preview_call[1][2]
+
+
+def test_remote_files_require_explicit_cluster_opt_in() -> None:
+    backend = SshSlurmBackend(
+        _config().model_copy(update={"allow_file_browsing": False}),
+        executor=_json_executor(),
+    )
+
+    with pytest.raises(FileBrowsingDisabledError):
+        asyncio.run(backend.list_remote_directory(RemoteDirectoryRequest()))
+
+
+def test_completed_job_logs_are_authorized_resolved_and_streamed() -> None:
+    executor = _json_executor()
+    payload = json.loads(_fixture("json/sacct_24_11.json"))
+    job = next(record for record in payload["jobs"] if str(record["job_id"]) == "11998")
+    job["standard_output"] = "/home/researcher/logs/a b;$(touch nope).out"
+    job["standard_error"] = "/home/researcher/logs/a b.err"
+    executor.responses.update(
+        {
+            "scontrol_job_logs_json": _result(
+                json.dumps(
+                    {
+                        "jobs": [
+                            {
+                                "job_id": "11998",
+                                "name": "preprocess",
+                                "user_name": "researcher",
+                                "job_state": ["COMPLETED"],
+                                "current_working_directory": "/home/researcher/work",
+                                "standard_output": "ignored.out",
+                                "standard_error": "ignored.err",
+                            }
+                        ]
+                    }
+                )
+            ),
+            "sacct_job_logs_json": _result(json.dumps(payload)),
+            "job_log_file_exists": _result(""),
+            "job_log_file_regular": _result(""),
+            "job_log_file_readable": _result(""),
+        }
+    )
+    backend = SshSlurmBackend(_config(), executor=executor)
+
+    async def exercise() -> list[JobLogEvent]:
+        session = await backend.open_job_log_stream("11998")
+        return [event async for event in session.events]
+
+    events = asyncio.run(exercise())
+
+    metadata = events[0]
+    assert isinstance(metadata, JobLogMetadataEvent)
+    assert metadata.sources == ["stdout", "stderr"]
+    assert [call[0] for call in executor.stream_calls] == ["tail", "tail"]
+    assert executor.stream_calls[0][1] == (
+        "--lines=200",
+        "--",
+        "/home/researcher/logs/a b;$(touch nope).out",
+    )
+    assert all("/home/researcher" not in str(event) for event in events)
+
+
+def test_job_logs_require_the_actual_remote_ssh_owner() -> None:
+    executor = _json_executor()
+    executor.responses.update(
+        {
+            "scontrol_job_logs_json": _result(
+                json.dumps(
+                    {
+                        "jobs": [
+                            {
+                                "job_id": "11998",
+                                "name": "other-job",
+                                "user_name": "another-user",
+                                "job_state": ["RUNNING"],
+                                "current_working_directory": "/private",
+                                "standard_output": "/private/job.out",
+                            }
+                        ]
+                    }
+                )
+            ),
+            "sacct_job_logs_json": _result('{"jobs": []}'),
+            "sacct_job_logs_text": _result(""),
+        }
+    )
+    backend = SshSlurmBackend(_config(), executor=executor)
+
+    with pytest.raises(JobLogAccessForbiddenError):
+        asyncio.run(backend.open_job_log_stream("11998"))
+
+    assert executor.stream_calls == []
 
 
 def test_invalid_json_falls_back_to_fixed_partition_format() -> None:
@@ -134,9 +314,10 @@ def test_invalid_json_falls_back_to_fixed_partition_format() -> None:
     partitions = asyncio.run(backend.get_partitions())
 
     assert {partition.name for partition in partitions} == {"compute", "gpu", "long"}
-    assert [call[2] for call in executor.calls][-2:] == [
+    assert [call[2] for call in executor.calls][-3:] == [
         "sinfo_partitions_json",
         "sinfo_partitions_text",
+        "scontrol_partitions_json",
     ]
 
 

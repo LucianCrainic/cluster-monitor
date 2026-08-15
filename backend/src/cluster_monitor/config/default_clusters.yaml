@@ -13,3 +13,4 @@ clusters:
     name: Local Mock Cluster
     backend: mock
     allow_job_actions: true
+    allow_file_browsing: true

@@ -25,6 +25,7 @@ from decimal import ROUND_CEILING, Decimal, InvalidOperation
 
 from cluster_monitor.models import Job, JobState, Node, Partition
 from cluster_monitor.slurm.normalization import normalize_job_state, normalize_node_state
+from cluster_monitor.slurm.topology import expand_slurm_hostlist
 
 PARTITION_FIELDS = (
     "name",
@@ -161,7 +162,8 @@ def parse_partitions_text(output: str) -> list[Partition]:
         allocation = _parse_allocation(row["node_allocation"])
         reported_node_count = _parse_nonnegative_int(row["node_count"])
         node_count = reported_node_count if reported_node_count is not None else allocation[3]
-        name = _require_value(row["name"], "partition name").removesuffix("*")
+        reported_name = _require_value(row["name"], "partition name")
+        name = reported_name.removesuffix("*")
         availability_raw = row["availability"].strip()
         partitions.append(
             Partition(
@@ -173,6 +175,7 @@ def parse_partitions_text(output: str) -> list[Partition]:
                 allocated_node_count=allocation[0],
                 idle_node_count=allocation[1],
                 other_node_count=allocation[2],
+                is_default=reported_name.endswith("*"),
             )
         )
     return partitions
@@ -209,6 +212,7 @@ def parse_nodes_text(output: str) -> list[Node]:
             allocated_cpus=min(cpu_count, cpu_allocation[0]),
             memory_mb=memory_mb,
             allocated_memory_mb=allocated_memory_mb,
+            free_memory_mb=free_memory_mb,
             generic_resources=generic_resources,
             gpu_resources=[
                 resource
@@ -502,12 +506,12 @@ def parse_slurm_gpu_count(value: str | None) -> int | None:
 
 
 def parse_slurm_node_list(value: str | None) -> list[str]:
-    """Return top-level node expressions while preserving bracketed ranges."""
+    """Return concrete node names expanded from Slurm hostlist expressions."""
 
     text = _optional_text(value)
     if text is None:
         return []
-    return _split_top_level(text)
+    return expand_slurm_hostlist(text)
 
 
 def _iter_rows(

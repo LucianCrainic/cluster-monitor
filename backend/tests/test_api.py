@@ -70,6 +70,59 @@ def test_mock_overview_and_resource_endpoints(client: TestClient) -> None:
     assert {node["state"] for node in nodes.json()} >= {"idle", "allocated", "drained"}
 
 
+def test_topology_returns_one_enriched_snapshot(client: TestClient) -> None:
+    response = client.get("/api/clusters/local-mock/topology")
+
+    assert response.status_code == 200
+    assert response.json()["kind"] == "tree"
+    assert response.json()["partitions"][0]["node_names"]
+    assert response.json()["nodes"][0]["sockets"] == 2
+    assert response.json()["groups"][0]["kind"] == "switch"
+
+
+def test_read_only_file_routes_browse_and_preview_without_caching(client: TestClient) -> None:
+    directory = client.post(
+        "/api/clusters/local-mock/files/list",
+        json={"path": "/home/student", "show_hidden": False},
+    )
+    preview = client.post(
+        "/api/clusters/local-mock/files/preview",
+        json={"path": "/home/student/project/job.sh"},
+    )
+
+    assert directory.status_code == 200
+    assert directory.headers["cache-control"] == "no-store"
+    assert [entry["name"] for entry in directory.json()["entries"]] == ["logs", "project"]
+    assert preview.status_code == 200
+    assert preview.headers["cache-control"] == "no-store"
+    assert preview.json()["status"] == "available"
+    assert preview.json()["content"].startswith("#!/bin/bash")
+
+
+def test_file_browser_has_no_mutation_routes(client: TestClient) -> None:
+    path = "/api/clusters/local-mock/files/preview"
+
+    assert client.put(path, json={"path": "/tmp/a"}).status_code == 405
+    assert client.patch(path, json={"path": "/tmp/a"}).status_code == 405
+    assert client.delete(path).status_code == 405
+
+
+def test_file_browser_returns_stable_invalid_path_errors(client: TestClient) -> None:
+    relative = client.post(
+        "/api/clusters/local-mock/files/list",
+        json={"path": "relative/path"},
+    )
+    nul = client.post(
+        "/api/clusters/local-mock/files/preview",
+        json={"path": "/home/student/bad\u0000path"},
+    )
+
+    assert relative.status_code == 422
+    assert relative.json()["error"]["code"] == "remote_path_invalid"
+    assert nul.status_code == 422
+    assert nul.json()["error"]["code"] == "remote_path_invalid"
+
+
 def test_nodes_can_be_filtered(client: TestClient) -> None:
     by_state = client.get("/api/clusters/local-mock/nodes", params={"state": "drained"})
     by_partition = client.get(
@@ -113,6 +166,39 @@ def test_job_details_and_history(client: TestClient) -> None:
     assert details.json()["accounting"]["max_rss_mb"] > 0
     assert details.json()["working_directory"].startswith("/home/student/")
     assert [job["job_id"] for job in history.json()] == ["11997"]
+
+
+def test_mock_job_logs_are_streamed_as_path_free_sse(client: TestClient) -> None:
+    response = client.get("/api/clusters/local-mock/jobs/12001/logs/stream")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: metadata" in response.text
+    assert '"sources":["stdout","stderr"]' in response.text
+    assert "event: chunk" in response.text
+    assert "mock standard output" in response.text
+    assert "/home/student" not in response.text
+
+
+def test_mock_merged_job_log_is_deduplicated(client: TestClient) -> None:
+    response = client.get("/api/clusters/local-mock/jobs/12002/logs/stream")
+
+    assert response.status_code == 200
+    assert '"sources":["combined"]' in response.text
+    assert response.text.count("event: chunk") == 1
+
+
+def test_log_route_rejects_unsupported_identifiers_and_unavailable_cluster(
+    client: TestClient,
+) -> None:
+    step = client.get("/api/clusters/local-mock/jobs/12001.batch/logs/stream")
+    heterogeneous = client.get("/api/clusters/local-mock/jobs/12001+1/logs/stream")
+    unavailable = client.get("/api/clusters/ssh-demo/jobs/12001/logs/stream")
+
+    assert step.status_code == 422
+    assert heterogeneous.status_code == 422
+    assert unavailable.status_code == 503
+    assert unavailable.json()["error"]["code"] == "cluster_unavailable"
 
 
 def test_job_submission_requires_confirmation_and_returns_receipt(
@@ -231,7 +317,7 @@ def test_missing_resources_use_consistent_errors(client: TestClient) -> None:
 
 
 def test_unavailable_ssh_cluster_returns_structured_503(client: TestClient) -> None:
-    for suffix in ("overview", "partitions", "nodes", "jobs", "history"):
+    for suffix in ("overview", "partitions", "nodes", "topology", "jobs", "history"):
         response = client.get(f"/api/clusters/ssh-demo/{suffix}")
         assert response.status_code == 503
         assert response.json()["error"]["code"] == "cluster_unavailable"

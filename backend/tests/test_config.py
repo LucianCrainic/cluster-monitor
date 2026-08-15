@@ -36,6 +36,7 @@ def test_loads_valid_yaml_and_applies_defaults(tmp_path: Path) -> None:
     assert config.clusters[1].ssh_host == "research-hpc"
     assert config.clusters[1].command_timeout_seconds == 15
     assert config.clusters[1].allow_job_actions is False
+    assert config.clusters[1].allow_file_browsing is False
     assert config.application.refresh.overview_seconds == 5
     assert config.application.refresh.history_seconds == 60
     assert config.application.bind_host == "127.0.0.1"

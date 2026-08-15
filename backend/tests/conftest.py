@@ -34,6 +34,7 @@ def monitor_config() -> MonitorConfig:
                     "name": "Local Mock Cluster",
                     "backend": "mock",
                     "allow_job_actions": True,
+                    "allow_file_browsing": True,
                 },
                 {
                     "id": "ssh-demo",

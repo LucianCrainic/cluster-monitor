@@ -310,10 +310,11 @@ def _record_list(value: object | None) -> list[JsonObject] | None:
 
 def _parse_partition(record: JsonObject, index: int) -> Partition:
     del index
-    name = _required_text(
+    reported_name = _required_text(
         _first(record, ("partition", "name"), ("name",), ("partition_name",)),
         "partition name",
-    ).removesuffix("*")
+    )
+    name = reported_name.removesuffix("*")
     state_raw = _state_text(
         _first(
             record,
@@ -378,6 +379,8 @@ def _parse_partition(record: JsonObject, index: int) -> Partition:
 
     state_components = {part.casefold() for part in state_raw.replace("+", " ").split()}
     availability = bool(state_components & {"up", "active", "available"})
+    default_value = _unwrap(_first(record, ("default",), ("partition", "default")))
+    flags = {flag.casefold() for flag in _name_list(_first(record, ("flags",)))}
     return Partition(
         name=name,
         availability=availability,
@@ -387,6 +390,35 @@ def _parse_partition(record: JsonObject, index: int) -> Partition:
         allocated_node_count=allocated,
         idle_node_count=idle,
         other_node_count=other,
+        is_default=(
+            reported_name.endswith("*")
+            or default_value is True
+            or (
+                isinstance(default_value, str)
+                and default_value.casefold() in {"true", "yes", "default"}
+            )
+            or "default" in flags
+        ),
+        node_names=_node_list(_first(record, ("nodes", "configured"), ("node_names",))),
+        qos=_name_list(
+            _first(
+                record,
+                ("qos", "assigned"),
+                ("qos", "allowed"),
+                ("qos",),
+                ("quality_of_service",),
+            )
+        ),
+        minimum_nodes=_nonnegative_int(_first(record, ("minimums", "nodes"))),
+        maximum_nodes=_nonnegative_int(_first(record, ("maximums", "nodes"))),
+        maximum_cpus_per_node=_nonnegative_int(_first(record, ("maximums", "cpus_per_node"))),
+        default_memory_mb_per_node=_memory_mb(
+            _first(record, ("defaults", "partition_memory_per_node"))
+        ),
+        default_memory_mb_per_cpu=_memory_mb(
+            _first(record, ("defaults", "partition_memory_per_cpu"))
+        ),
+        maximum_time_minutes=_nonnegative_int(maximum_time),
     )
 
 
@@ -460,6 +492,14 @@ def _parse_node(record: JsonObject, index: int) -> Node:
             ("gres",),
         )
     )
+    allocated_resources = _resource_strings(
+        _first(
+            record,
+            ("gres", "used"),
+            ("allocated_generic_resources",),
+            ("gres_used",),
+        )
+    )
     partitions = _name_list(
         _first(
             record,
@@ -479,7 +519,15 @@ def _parse_node(record: JsonObject, index: int) -> Node:
         allocated_cpus=allocated_cpus,
         memory_mb=memory_mb,
         allocated_memory_mb=allocated_memory_mb,
+        free_memory_mb=_memory_mb(_first(record, ("free_mem",), ("free_memory",))),
+        cpu_load=_cpu_load(_first(record, ("cpu_load",), ("cpus", "load"))),
+        sockets=_nonnegative_int(_first(record, ("sockets",))),
+        cores_per_socket=_nonnegative_int(_first(record, ("cores",), ("cores_per_socket",))),
+        threads_per_core=_nonnegative_int(_first(record, ("threads",), ("threads_per_core",))),
+        configured_features=_name_list(_first(record, ("features",), ("configured_features",))),
+        active_features=_name_list(_first(record, ("active_features",), ("features", "active"))),
         generic_resources=resources,
+        allocated_generic_resources=allocated_resources,
         gpu_resources=[resource for resource in resources if _is_gpu_resource(resource)],
         reason=_reason_text(
             _first(record, ("reason", "description"), ("reason",), ("state_reason",))
@@ -511,6 +559,19 @@ def _merge_partition_rows(rows: Sequence[Partition]) -> list[Partition]:
             allocated_node_count=(existing.allocated_node_count + row.allocated_node_count),
             idle_node_count=existing.idle_node_count + row.idle_node_count,
             other_node_count=existing.other_node_count + row.other_node_count,
+            is_default=existing.is_default or row.is_default,
+            node_names=list(dict.fromkeys([*existing.node_names, *row.node_names])),
+            qos=list(dict.fromkeys([*existing.qos, *row.qos])),
+            minimum_nodes=existing.minimum_nodes or row.minimum_nodes,
+            maximum_nodes=existing.maximum_nodes or row.maximum_nodes,
+            maximum_cpus_per_node=(existing.maximum_cpus_per_node or row.maximum_cpus_per_node),
+            default_memory_mb_per_node=(
+                existing.default_memory_mb_per_node or row.default_memory_mb_per_node
+            ),
+            default_memory_mb_per_cpu=(
+                existing.default_memory_mb_per_cpu or row.default_memory_mb_per_cpu
+            ),
+            maximum_time_minutes=(existing.maximum_time_minutes or row.maximum_time_minutes),
         )
     return list(grouped.values())
 
@@ -1206,6 +1267,22 @@ def _nonnegative_int(value: object | None) -> int | None:
         return None
     try:
         parsed = int(text)
+    except ValueError:
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _cpu_load(value: object | None) -> float | None:
+    unwrapped = _unwrap(value)
+    if isinstance(unwrapped, int) and not isinstance(unwrapped, bool):
+        return max(0.0, unwrapped / 100)
+    if isinstance(unwrapped, float):
+        return unwrapped if unwrapped >= 0 else None
+    text = _optional_text(unwrapped)
+    if text is None:
+        return None
+    try:
+        parsed = float(text)
     except ValueError:
         return None
     return parsed if parsed >= 0 else None
