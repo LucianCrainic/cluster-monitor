@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" width="800" height="220">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1b2e"/>
+      <stop offset="100%" stop-color="#0d0f1c"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="220" rx="16" fill="url(#bg)"/>
+  <rect x="1" y="1" width="798" height="218" rx="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <rect x="0" y="210" width="800" height="10" rx="5" fill="url(#accent)"/>
+  <text x="400" y="96" text-anchor="middle" font-family="Menlo, Monaco, monospace" font-size="40" font-weight="700" fill="#ffffff">
+    cluster-monitor
+  </text>
+  <text x="400" y="136" text-anchor="middle" font-family="Menlo, Monaco, monospace" font-size="16" fill="#a7b0c3">
+    Slurm monitoring, locally, over your existing OpenSSH.
+  </text>
+  <text x="400" y="176" text-anchor="middle" font-family="Menlo, Monaco, monospace" font-size="12" fill="#565d73">
+    TODO: replace this placeholder with the final banner artwork.
+  </text>
+</svg>
