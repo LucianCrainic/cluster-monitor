@@ -1,10 +1,10 @@
 <div align="center">
 
 <!--
-  Banner placeholder
-  ------------------
-  Replace the SVG/PNG link below with the project banner image once artwork is
-  ready. Keep the centered layout and surrounding whitespace.
+  Banner
+  ------
+  The project banner artwork lives at docs/assets/banner.svg. Swap the link
+  below if a different image or size is preferred.
 -->
 <img src="docs/assets/banner.svg" alt="cluster-monitor" width="800" />
 
@@ -20,6 +20,7 @@ submitting and cancelling jobs through your existing OpenSSH client.**
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Slurm](https://img.shields.io/badge/Slurm-24.11-EE0000?logo=slurm)](https://slurm.schedmd.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </p>
 
@@ -101,4 +102,4 @@ welcome on [GitHub](https://github.com/LucianCrainic/cluster-monitor).
 
 ## License
 
-Not yet licensed — see the repository owner before reuse.
+Released under the [MIT License](LICENSE).
