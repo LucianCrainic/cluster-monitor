@@ -7,16 +7,25 @@ import { App } from "../App";
 import {
   mockCluster,
   mockJobDetails,
+  mockHistory,
   mockJobs,
   mockOverview,
+  mockRemoteDirectory,
+  mockRemotePreview,
   mockSettings,
+  mockTopology,
 } from "./fixtures";
 
 type ApiOverrides = Partial<{
   clusters: Response | Promise<Response>;
   overview: Response | Promise<Response>;
+  topology: Response | Promise<Response>;
   jobs: Response | Promise<Response>;
+  history: Response | Promise<Response>;
   job: Response | Promise<Response>;
+  jobLogs: Response | Promise<Response>;
+  filesList: Response | Promise<Response>;
+  filePreview: Response | Promise<Response>;
   submitJob: Response | Promise<Response>;
   cancelJob: Response | Promise<Response>;
   settings: Response | Promise<Response>;
@@ -27,6 +36,20 @@ export function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+export function sseResponse(frames?: string): Response {
+  return new Response(
+    frames ??
+      [
+        'event: metadata\ndata: {"type":"metadata","job_id":"18432","state":"running","sources":["stdout","stderr"],"initial_lines":200}\n\n',
+        'event: status\ndata: {"type":"status","status":"live","message":"Following live job output."}\n\n',
+        'event: chunk\ndata: {"type":"chunk","source":"stdout","sequence":1,"text":"training epoch 1\\n"}\n\n',
+        'event: chunk\ndata: {"type":"chunk","source":"stderr","sequence":2,"text":"warning: sample\\n"}\n\n',
+        'event: complete\ndata: {"type":"complete","reason":"job_finished"}\n\n',
+      ].join(""),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
 }
 
 function responseFor(
@@ -52,6 +75,18 @@ export function installApiMock(overrides: ApiOverrides = {}) {
     if (path.endsWith("/overview")) {
       return responseFor(overrides.overview, mockOverview);
     }
+    if (path.endsWith("/topology")) {
+      return responseFor(overrides.topology, mockTopology);
+    }
+    if (path.endsWith("/files/list")) {
+      return responseFor(overrides.filesList, mockRemoteDirectory);
+    }
+    if (path.endsWith("/files/preview")) {
+      return responseFor(overrides.filePreview, mockRemotePreview);
+    }
+    if (path.endsWith("/history")) {
+      return responseFor(overrides.history, mockHistory);
+    }
     if (path.endsWith("/jobs") && method === "POST") {
       return responseFor(overrides.submitJob, {
         cluster_id: mockCluster.id,
@@ -69,6 +104,11 @@ export function installApiMock(overrides: ApiOverrides = {}) {
         requested_at: "2026-07-26T11:05:00Z",
         status: "cancellation_requested",
       });
+    }
+    if (path.endsWith("/logs/stream")) {
+      return responseFor(overrides.jobLogs, null).then((response) =>
+        overrides.jobLogs ? response : sseResponse(),
+      );
     }
     if (path.endsWith("/jobs")) {
       return responseFor(overrides.jobs, mockJobs);

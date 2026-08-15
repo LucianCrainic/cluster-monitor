@@ -7,13 +7,14 @@ import {
   getJobLocation,
   nextSort,
 } from "../utils/jobs";
-import { formatDuration } from "../utils/format";
+import { formatDateTime, formatDuration } from "../utils/format";
 import { JobStateBadge } from "./StatusBadge";
 
 interface JobsTableProps {
   jobs: Job[];
   sort: JobSort;
   onSort: (sort: JobSort) => void;
+  variant?: "active" | "history";
 }
 
 interface SortableHeaderProps {
@@ -56,14 +57,20 @@ function SortableHeader({
   );
 }
 
-export function JobsTable({ jobs, sort, onSort }: JobsTableProps) {
+export function JobsTable({
+  jobs,
+  sort,
+  onSort,
+  variant = "active",
+}: JobsTableProps) {
+  const history = variant === "history";
   return (
     <div className="table-card">
       <div className="table-scroll">
         <table className="jobs-table">
           <caption className="sr-only">
-            Jobs for the selected cluster. Column headings can be used to sort
-            the table.
+            {history ? "Recent job history" : "Jobs"} for the selected cluster.
+            Column headings can be used to sort the table.
           </caption>
           <thead>
             <tr>
@@ -99,27 +106,48 @@ export function JobsTable({ jobs, sort, onSort }: JobsTableProps) {
                 onSort={onSort}
                 className="table-column--medium"
               />
-              <SortableHeader
-                label="Limit"
-                sortKey="time_limit_seconds"
-                sort={sort}
-                onSort={onSort}
-                className="table-column--wide"
-              />
-              <SortableHeader
-                label="CPUs"
-                sortKey="requested_cpus"
-                sort={sort}
-                onSort={onSort}
-                className="table-column--wide numeric"
-              />
-              <SortableHeader
-                label="GPUs"
-                sortKey="requested_gpus"
-                sort={sort}
-                onSort={onSort}
-                className="table-column--wide numeric"
-              />
+              {history ? (
+                <>
+                  <SortableHeader
+                    label="Submitted"
+                    sortKey="submit_time"
+                    sort={sort}
+                    onSort={onSort}
+                    className="table-column--date"
+                  />
+                  <SortableHeader
+                    label="Finished"
+                    sortKey="end_time"
+                    sort={sort}
+                    onSort={onSort}
+                    className="table-column--date"
+                  />
+                </>
+              ) : (
+                <>
+                  <SortableHeader
+                    label="Limit"
+                    sortKey="time_limit_seconds"
+                    sort={sort}
+                    onSort={onSort}
+                    className="table-column--wide"
+                  />
+                  <SortableHeader
+                    label="CPUs"
+                    sortKey="requested_cpus"
+                    sort={sort}
+                    onSort={onSort}
+                    className="table-column--wide numeric"
+                  />
+                  <SortableHeader
+                    label="GPUs"
+                    sortKey="requested_gpus"
+                    sort={sort}
+                    onSort={onSort}
+                    className="table-column--wide numeric"
+                  />
+                </>
+              )}
               <th scope="col" className="table-column--location">
                 Node / reason
               </th>
@@ -145,15 +173,28 @@ export function JobsTable({ jobs, sort, onSort }: JobsTableProps) {
                 <td className="table-column--medium tabular">
                   {formatDuration(job.elapsed_seconds)}
                 </td>
-                <td className="table-column--wide tabular">
-                  {formatDuration(job.time_limit_seconds)}
-                </td>
-                <td className="table-column--wide numeric tabular">
-                  {job.requested_cpus}
-                </td>
-                <td className="table-column--wide numeric tabular">
-                  {job.requested_gpus ?? "—"}
-                </td>
+                {history ? (
+                  <>
+                    <td className="table-column--date tabular" title={formatDateTime(job.submit_time)}>
+                      {formatDateTime(job.submit_time)}
+                    </td>
+                    <td className="table-column--date tabular" title={formatDateTime(job.end_time)}>
+                      {formatDateTime(job.end_time)}
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="table-column--wide tabular">
+                      {formatDuration(job.time_limit_seconds)}
+                    </td>
+                    <td className="table-column--wide numeric tabular">
+                      {job.requested_cpus}
+                    </td>
+                    <td className="table-column--wide numeric tabular">
+                      {job.requested_gpus ?? "—"}
+                    </td>
+                  </>
+                )}
                 <td className="table-column--location">
                   <span
                     className={

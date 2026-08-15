@@ -2,8 +2,11 @@ import type {
   AppSettings,
   Cluster,
   ClusterOverview,
+  ClusterTopology,
   Job,
   JobDetails,
+  RemoteDirectory,
+  RemoteFilePreview,
 } from "../types/api";
 
 export const mockSettings: AppSettings = {
@@ -23,9 +26,130 @@ export const mockCluster: Cluster = {
   backend: "mock",
   connection_status: "connected",
   job_actions_enabled: true,
+  file_browser_enabled: true,
   slurm_version: "24.05.4",
   last_successful_refresh: "2026-07-26T10:00:00Z",
   last_error: null,
+};
+
+export const mockTopology: ClusterTopology = {
+  cluster_id: "local-mock",
+  kind: "flat",
+  captured_at: "2026-07-26T10:00:00Z",
+  partitions: [
+    {
+      name: "compute",
+      availability: true,
+      state: "UP",
+      time_limit: "02:00:00",
+      node_count: 2,
+      allocated_node_count: 1,
+      idle_node_count: 1,
+      other_node_count: 0,
+      is_default: true,
+      node_names: ["cpu-01", "cpu-02"],
+      qos: ["normal"],
+      minimum_nodes: 1,
+      maximum_nodes: 4,
+      maximum_cpus_per_node: 64,
+      maximum_time_minutes: 120,
+    },
+    {
+      name: "gpu",
+      availability: true,
+      state: "UP",
+      time_limit: "01:00:00",
+      node_count: 1,
+      allocated_node_count: 0,
+      idle_node_count: 1,
+      other_node_count: 0,
+      node_names: ["gpu-01"],
+      qos: ["gpu"],
+      maximum_nodes: 1,
+      maximum_cpus_per_node: 32,
+      maximum_time_minutes: 60,
+    },
+  ],
+  nodes: [
+    {
+      name: "cpu-01",
+      partition_names: ["compute"],
+      state: "allocated",
+      state_raw: "ALLOCATED",
+      cpu_count: 64,
+      allocated_cpus: 32,
+      memory_mb: 262144,
+      free_memory_mb: 120000,
+      cpu_load: 31.2,
+      sockets: 2,
+      cores_per_socket: 16,
+      threads_per_core: 2,
+      active_features: ["zen4"],
+    },
+    {
+      name: "cpu-02",
+      partition_names: ["compute"],
+      state: "idle",
+      state_raw: "IDLE",
+      cpu_count: 64,
+      allocated_cpus: 0,
+      memory_mb: 262144,
+      free_memory_mb: 250000,
+    },
+    {
+      name: "gpu-01",
+      partition_names: ["gpu"],
+      state: "idle",
+      state_raw: "IDLE",
+      cpu_count: 32,
+      allocated_cpus: 0,
+      memory_mb: 524288,
+      free_memory_mb: 500000,
+      generic_resources: ["gpu:a100:4"],
+      gpu_resources: ["A100 x4"],
+    },
+  ],
+  groups: [],
+};
+
+export const mockRemoteDirectory: RemoteDirectory = {
+  cluster_id: "local-mock",
+  path: "/home/researcher",
+  parent_path: "/home",
+  truncated: false,
+  entries: [
+    {
+      name: "project",
+      path: "/home/researcher/project",
+      kind: "directory",
+      size_bytes: 0,
+      modified_at: "2026-07-26T09:00:00Z",
+      permissions: "drwxr-xr-x",
+      readable: true,
+    },
+    {
+      name: "job script.sh",
+      path: "/home/researcher/job script.sh",
+      kind: "file",
+      size_bytes: 36,
+      modified_at: "2026-07-26T09:30:00Z",
+      permissions: "-rw-r--r--",
+      readable: true,
+    },
+  ],
+};
+
+export const mockRemotePreview: RemoteFilePreview = {
+  cluster_id: "local-mock",
+  path: "/home/researcher/job script.sh",
+  name: "job script.sh",
+  kind: "file",
+  size_bytes: 36,
+  modified_at: "2026-07-26T09:30:00Z",
+  permissions: "-rw-r--r--",
+  status: "available",
+  content: "#!/bin/bash\necho remote job\n",
+  language: "shell",
 };
 
 export const mockOverview: ClusterOverview = {
@@ -99,6 +223,21 @@ export const mockJobs: Job[] = [
     end_time: "2026-07-26T07:00:00Z",
     elapsed_seconds: 1740,
     time_limit_seconds: 3600,
+  },
+];
+
+export const mockHistory: Job[] = [
+  mockJobs[2]!,
+  {
+    ...mockJobs[0]!,
+    job_id: "18390",
+    job_name: "failed-simulation",
+    state: "failed",
+    state_raw: "FAILED",
+    submit_time: "2026-07-25T14:00:00Z",
+    start_time: "2026-07-25T14:01:00Z",
+    end_time: "2026-07-25T14:04:00Z",
+    elapsed_seconds: 180,
   },
 ];
 

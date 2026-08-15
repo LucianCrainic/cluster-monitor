@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
-import { useSubmitJobMutation } from "../api/queries";
+import { useSubmitJobMutation, useTopologyQuery } from "../api/queries";
+import { PartitionCards } from "../components/PartitionCards";
+import { RemoteFileBrowser } from "../components/RemoteFileBrowser";
 import { useCluster } from "../context/useCluster";
 import type { SubmitJobRequest } from "../types/api";
 import { formatDateTime } from "../utils/format";
@@ -46,7 +48,12 @@ export function SubmitJobPage() {
   const { selectedCluster, selectedClusterId } = useCluster();
   const [draft, setDraft] = useState<SubmissionDraft>(INITIAL_DRAFT);
   const [review, setReview] = useState<ReviewedSubmission | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(true);
+  const [workspaceTab, setWorkspaceTab] = useState<"resources" | "files">("resources");
+  const [pendingRemoteScript, setPendingRemoteScript] = useState<{ content: string; path: string } | null>(null);
+  const scriptRef = useRef<HTMLTextAreaElement>(null);
   const submitMutation = useSubmitJobMutation(selectedClusterId);
+  const topologyQuery = useTopologyQuery(selectedClusterId);
   const resetMutation = submitMutation.reset;
   const activeReview =
     review?.clusterId === selectedClusterId ? review : null;
@@ -85,6 +92,39 @@ export function SubmitJobPage() {
     setReview(null);
     resetMutation();
   }
+
+  function insertRemotePath(quotedPath: string) {
+    const editor = scriptRef.current;
+    const start = editor?.selectionStart ?? draft.script.length;
+    const end = editor?.selectionEnd ?? start;
+    const separator = start > 0 && !/\s/.test(draft.script[start - 1] ?? "") ? " " : "";
+    const insertion = `${separator}${quotedPath}`;
+    updateDraft(
+      "script",
+      `${draft.script.slice(0, start)}${insertion}${draft.script.slice(end)}`,
+    );
+    requestAnimationFrame(() => {
+      const cursor = start + insertion.length;
+      scriptRef.current?.focus();
+      scriptRef.current?.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function requestRemoteScript(content: string, path: string) {
+    if (draft.script !== STARTER_SCRIPT) {
+      setPendingRemoteScript({ content, path });
+      return;
+    }
+    updateDraft("script", content);
+  }
+
+  const resourceRequest = {
+    nodes: safeNumber(draft.nodes),
+    cpusPerNode: safeNumber(draft.cpusPerTask),
+    memoryMb: draft.memoryMb.trim() ? safeNumber(draft.memoryMb) : null,
+    gpusPerNode: safeNumber(draft.gpusPerNode),
+    timeMinutes: safeNumber(draft.timeLimitMinutes),
+  };
 
   if (!actionsEnabled) {
     return (
@@ -210,6 +250,7 @@ export function SubmitJobPage() {
                 options in the resource fields, not in #SBATCH directives.
               </p>
               <textarea
+                ref={scriptRef}
                 id="submit-job-script"
                 name="script"
                 value={draft.script}
@@ -221,6 +262,60 @@ export function SubmitJobPage() {
               />
             </div>
           </section>
+
+          <section className="preparation-workspace" aria-labelledby="preparation-workspace-heading">
+            <button
+              className="preparation-workspace__toggle"
+              type="button"
+              aria-expanded={workspaceOpen}
+              aria-controls="preparation-workspace-content"
+              onClick={() => setWorkspaceOpen((open) => !open)}
+            >
+              <span><span className="section-eyebrow">Preparation workspace</span><strong id="preparation-workspace-heading">Inspect before you submit</strong></span>
+              <span aria-hidden="true">{workspaceOpen ? "−" : "+"}</span>
+            </button>
+            {workspaceOpen ? (
+              <div id="preparation-workspace-content">
+                <div className="preparation-workspace__tabs" role="tablist" aria-label="Preparation workspace">
+                  <button type="button" role="tab" aria-selected={workspaceTab === "resources"} onClick={() => setWorkspaceTab("resources")}>Resources</button>
+                  <button type="button" role="tab" aria-selected={workspaceTab === "files"} disabled={!selectedCluster?.file_browser_enabled} onClick={() => setWorkspaceTab("files")}>Files</button>
+                </div>
+                {workspaceTab === "resources" ? (
+                  <div className="preparation-workspace__panel" role="tabpanel">
+                    <div className="preparation-workspace__intro"><strong>Partition compatibility</strong><p>These checks are advisory and use current Slurm capacity. Slurm still chooses the allocated nodes.</p></div>
+                    {topologyQuery.data ? (
+                      <PartitionCards
+                        topology={topologyQuery.data}
+                        selectedPartition={draft.partition || topologyQuery.data.partitions.find((partition) => partition.is_default)?.name}
+                        request={resourceRequest}
+                        compact
+                        onSelect={(partition) => updateDraft("partition", partition.name)}
+                      />
+                    ) : topologyQuery.error ? (
+                      <div className="inline-state"><strong>Partition metadata is unavailable.</strong><span>You can still enter a partition name above and submit normally.</span></div>
+                    ) : <p>Loading partition capacity…</p>}
+                  </div>
+                ) : selectedClusterId && selectedCluster?.file_browser_enabled ? (
+                  <div className="preparation-workspace__panel" role="tabpanel">
+                    <div className="preparation-workspace__intro"><strong>Read-only remote files</strong><p>Insert a safely quoted path at the script cursor, or copy a remote shell script into this local draft. No remote file is modified.</p></div>
+                    <RemoteFileBrowser clusterId={selectedClusterId} compact onInsertPath={insertRemotePath} onUseAsScript={requestRemoteScript} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          {pendingRemoteScript ? (
+            <section className="remote-script-confirmation" role="alertdialog" aria-labelledby="replace-script-heading">
+              <p className="section-eyebrow">Local draft only</p>
+              <h2 id="replace-script-heading">Replace your edited batch script?</h2>
+              <p>Loading <code>{pendingRemoteScript.path}</code> replaces the current browser-local draft. The remote file will remain unchanged.</p>
+              <div className="job-action-buttons">
+                <button className="button button--secondary" type="button" onClick={() => setPendingRemoteScript(null)}>Keep current draft</button>
+                <button className="button button--primary" type="button" onClick={() => { updateDraft("script", pendingRemoteScript.content); setPendingRemoteScript(null); }}>Replace local draft</button>
+              </div>
+            </section>
+          ) : null}
 
           <section
             className="job-action-card"
@@ -314,6 +409,11 @@ export function SubmitJobPage() {
       )}
     </div>
   );
+}
+
+function safeNumber(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
 function NumberField({
