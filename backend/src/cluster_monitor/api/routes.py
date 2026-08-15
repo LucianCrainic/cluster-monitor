@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Header, Path, Query, status
+from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
 
 from cluster_monitor import __version__
 from cluster_monitor.api.dependencies import get_cluster_service
@@ -13,15 +16,21 @@ from cluster_monitor.models import (
     ClientSettings,
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogEvent,
     JobState,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     NodeState,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
 )
 from cluster_monitor.services import ClusterService
 
@@ -42,6 +51,10 @@ JobId = Annotated[
 CancelableJobId = Annotated[
     str,
     Path(min_length=1, max_length=128, pattern=r"^[1-9][0-9]*$"),
+]
+LoggableJobId = Annotated[
+    str,
+    Path(min_length=1, max_length=128, pattern=r"^[1-9][0-9]*(?:_[0-9]+)?$"),
 ]
 ActionConfirmation = Annotated[
     Literal["confirmed"],
@@ -115,6 +128,45 @@ async def get_nodes(
 
 
 @router.get(
+    "/clusters/{cluster_id}/topology",
+    response_model=ClusterTopology,
+    responses=ERROR_RESPONSES,
+)
+async def get_topology(cluster_id: ClusterId, service: Service) -> ClusterTopology:
+    return await service.get_topology(cluster_id)
+
+
+@router.post(
+    "/clusters/{cluster_id}/files/list",
+    response_model=RemoteDirectory,
+    responses=ERROR_RESPONSES,
+)
+async def list_remote_directory(
+    cluster_id: ClusterId,
+    request: RemoteDirectoryRequest,
+    service: Service,
+    response: Response,
+) -> RemoteDirectory:
+    response.headers["Cache-Control"] = "no-store"
+    return await service.list_remote_directory(cluster_id, request)
+
+
+@router.post(
+    "/clusters/{cluster_id}/files/preview",
+    response_model=RemoteFilePreview,
+    responses=ERROR_RESPONSES,
+)
+async def preview_remote_file(
+    cluster_id: ClusterId,
+    request: RemoteFilePreviewRequest,
+    service: Service,
+    response: Response,
+) -> RemoteFilePreview:
+    response.headers["Cache-Control"] = "no-store"
+    return await service.preview_remote_file(cluster_id, request)
+
+
+@router.get(
     "/clusters/{cluster_id}/jobs",
     response_model=list[Job],
     responses=ERROR_RESPONSES,
@@ -162,6 +214,73 @@ async def submit_job(
 )
 async def get_job(cluster_id: ClusterId, job_id: JobId, service: Service) -> JobDetails:
     return await service.get_job(cluster_id, job_id)
+
+
+@router.get(
+    "/clusters/{cluster_id}/jobs/{job_id}/logs/stream",
+    response_class=StreamingResponse,
+    responses={
+        **ERROR_RESPONSES,
+        200: {
+            "description": "Path-free Server-Sent Events carrying job output.",
+            "content": {"text/event-stream": {}},
+        },
+    },
+)
+async def stream_job_logs(
+    request: Request,
+    cluster_id: ClusterId,
+    job_id: LoggableJobId,
+    service: Service,
+) -> StreamingResponse:
+    session = await service.open_job_log_stream(cluster_id, job_id)
+
+    async def events() -> AsyncIterator[str]:
+        iterator = session.events.__aiter__()
+        pending: asyncio.Task[JobLogEvent] | None = None
+
+        async def next_event() -> JobLogEvent:
+            return await iterator.__anext__()
+
+        try:
+            while True:
+                if pending is None:
+                    pending = asyncio.create_task(next_event())
+                done, _ = await asyncio.wait({pending}, timeout=15.0)
+                if not done:
+                    if await request.is_disconnected():
+                        return
+                    yield ": heartbeat\n\n"
+                    continue
+                try:
+                    event = pending.result()
+                except StopAsyncIteration:
+                    return
+                finally:
+                    pending = None
+                yield f"event: {event.type}\ndata: {event.model_dump_json()}\n\n"
+        finally:
+            if pending is not None and not pending.done():
+                pending.cancel()
+                await asyncio.gather(pending, return_exceptions=True)
+            close = getattr(iterator, "aclose", None)
+            if callable(close):
+                close_task = asyncio.create_task(close())
+                try:
+                    await asyncio.shield(close_task)
+                except asyncio.CancelledError:
+                    await close_task
+                    raise
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-store",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.delete(

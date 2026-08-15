@@ -43,6 +43,70 @@ def test_parses_slurm_24_11_partition_shape() -> None:
     assert partitions[1].node_count == 2
 
 
+def test_parses_rich_scontrol_partition_and_node_fields() -> None:
+    partitions = parse_partitions_json(
+        json.dumps(
+            {
+                "partitions": [
+                    {
+                        "name": "students",
+                        "partition": {"state": "UP", "default": True},
+                        "nodes": {"configured": "node[123-124]", "total": 2},
+                        "qos": "students_limit",
+                        "minimums": {"nodes": 1},
+                        "maximums": {
+                            "nodes": 4,
+                            "cpus_per_node": 62,
+                            "time": {"number": 30, "set": True, "infinite": False},
+                        },
+                        "defaults": {"partition_memory_per_node": {"number": 1024, "set": True}},
+                    }
+                ]
+            }
+        )
+    )
+    nodes = parse_nodes_json(
+        json.dumps(
+            {
+                "nodes": [
+                    {
+                        "name": "node124",
+                        "partitions": ["students"],
+                        "state": ["MIXED", "PLANNED"],
+                        "cpus": 64,
+                        "alloc_cpus": 32,
+                        "real_memory": 257566,
+                        "free_mem": 29257,
+                        "cpu_load": 3150,
+                        "sockets": 2,
+                        "cores": 16,
+                        "threads": 2,
+                        "features": ["rtx6000"],
+                        "active_features": ["rtx6000"],
+                        "gres": "gpu:rtx6000:2",
+                        "gres_used": "gpu:rtx6000:1",
+                    }
+                ]
+            }
+        )
+    )
+
+    partition = partitions[0]
+    assert partition.is_default is True
+    assert partition.node_names == ["node123", "node124"]
+    assert partition.qos == ["students_limit"]
+    assert partition.maximum_nodes == 4
+    assert partition.maximum_cpus_per_node == 62
+    assert partition.maximum_time_minutes == 30
+    assert partition.default_memory_mb_per_node == 1024
+    node = nodes[0]
+    assert node.state is NodeState.MIXED
+    assert node.free_memory_mb == 29257
+    assert node.cpu_load == 31.5
+    assert (node.sockets, node.cores_per_socket, node.threads_per_core) == (2, 16, 2)
+    assert node.allocated_generic_resources == ["gpu:rtx6000:1"]
+
+
 def test_parses_slurm_24_11_node_shape_and_wrapped_scalars() -> None:
     nodes = parse_nodes_json(_fixture("sinfo_24_11.json"))
 

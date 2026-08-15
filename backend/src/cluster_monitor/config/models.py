@@ -35,6 +35,7 @@ class ClusterConfig(ApiModel):
     slurm_user: str = "current"
     command_timeout_seconds: float = Field(default=15.0, gt=0, le=300)
     allow_job_actions: bool = False
+    allow_file_browsing: bool = False
 
     @field_validator("id")
     @classmethod

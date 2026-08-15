@@ -6,8 +6,8 @@ import asyncio
 import re
 import shlex
 import time
-from collections.abc import Sequence
-from contextlib import suppress
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -28,6 +28,7 @@ _MAX_STDIN_BYTES = 1_048_576
 # Maximum retained bytes for each of stdout and stderr.
 MAX_CAPTURE_BYTES = 8 * 1_048_576
 _STREAM_READ_BYTES = 64 * 1024
+_MAX_STREAM_DIAGNOSTIC_BYTES = 64 * 1024
 
 _StreamName = Literal["stdout", "stderr"]
 
@@ -40,6 +41,57 @@ class SshCommandResult:
     stderr: str
     exit_code: int
     duration_seconds: float
+
+
+class SshByteStream:
+    """A bounded-diagnostic byte stream backed by one OpenSSH process."""
+
+    def __init__(
+        self,
+        process: asyncio.subprocess.Process,
+        *,
+        host_alias: str,
+        remote_executable: str,
+        stderr_task: asyncio.Task[bytes],
+    ) -> None:
+        if process.stdout is None:
+            raise RuntimeError("OpenSSH process did not expose a stdout pipe")
+        self._process = process
+        self._stdout = process.stdout
+        self._host_alias = host_alias
+        self._remote_executable = remote_executable
+        self._stderr_task = stderr_task
+        self._finished = False
+
+    def __aiter__(self) -> SshByteStream:
+        return self
+
+    async def __anext__(self) -> bytes:
+        chunk = await self._stdout.read(_STREAM_READ_BYTES)
+        if chunk:
+            return chunk
+        if self._finished:
+            raise StopAsyncIteration
+        self._finished = True
+        exit_code = await self._process.wait()
+        stderr = _decode(await self._stderr_task)
+        if exit_code == _SSH_CONNECTION_ERROR:
+            raise ClusterConnectionError(
+                "OpenSSH lost the configured cluster connection.",
+                host_alias=self._host_alias,
+                remote_executable=self._remote_executable,
+                exit_code=exit_code,
+                stderr=stderr,
+            )
+        if exit_code != 0:
+            raise RemoteCommandError(
+                "The remote streaming command returned a non-zero exit status.",
+                host_alias=self._host_alias,
+                remote_executable=self._remote_executable,
+                exit_code=exit_code,
+                stderr=stderr,
+            )
+        raise StopAsyncIteration
 
 
 class RemoteCommandOutputLimitError(RemoteCommandError):
@@ -357,6 +409,103 @@ class OpenSshExecutor:
             duration_seconds=duration,
         )
 
+    @asynccontextmanager
+    async def stream(
+        self,
+        remote_executable: str,
+        arguments: Sequence[str] = (),
+        *,
+        command_type: str | None = None,
+    ) -> AsyncIterator[SshByteStream]:
+        """Stream one remote command until it exits or its consumer disconnects.
+
+        Unlike :meth:`execute`, this intentionally has no wall-clock timeout.
+        The context owns the child process and always terminates and drains it.
+        """
+
+        argv = self.build_command(remote_executable, arguments)
+        safe_command_type = _safe_command_type(remote_executable, command_type)
+        started = time.perf_counter()
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *argv,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except OSError as exc:
+            raise ClusterConnectionError(
+                "The local OpenSSH client could not be started.",
+                host_alias=self._host_alias,
+                remote_executable=remote_executable,
+            ) from exc
+
+        if process.stderr is None:
+            await self._cleanup_cancelled_process(process)
+            raise RuntimeError("OpenSSH process did not expose a stderr pipe")
+        stderr_task = asyncio.create_task(_read_stream_diagnostics(process.stderr))
+        stream = SshByteStream(
+            process,
+            host_alias=self._host_alias,
+            remote_executable=remote_executable,
+            stderr_task=stderr_task,
+        )
+        logger.info(
+            "ssh_stream_open cluster_id=%s host=%s command_type=%s",
+            self._cluster_id,
+            self._host_alias,
+            safe_command_type,
+            extra={
+                "cluster_id": self._cluster_id,
+                "cluster_host": self._host_alias,
+                "command_type": safe_command_type,
+            },
+        )
+        try:
+            yield stream
+        finally:
+            cleanup_task = asyncio.create_task(self._close_stream(process, stderr_task))
+            try:
+                await asyncio.shield(cleanup_task)
+            except asyncio.CancelledError:
+                await cleanup_task
+                raise
+            duration = time.perf_counter() - started
+            logger.info(
+                "ssh_stream_closed cluster_id=%s host=%s command_type=%s "
+                "exit_status=%s duration_ms=%.1f",
+                self._cluster_id,
+                self._host_alias,
+                safe_command_type,
+                process.returncode,
+                duration * 1_000,
+                extra={
+                    "cluster_id": self._cluster_id,
+                    "cluster_host": self._host_alias,
+                    "command_type": safe_command_type,
+                    "duration_seconds": duration,
+                    "exit_status": process.returncode,
+                },
+            )
+
+    async def _close_stream(
+        self,
+        process: asyncio.subprocess.Process,
+        stderr_task: asyncio.Task[bytes],
+    ) -> None:
+        stdout_drain = asyncio.create_task(_discard_stream(process.stdout))
+        if process.returncode is None:
+            with suppress(ProcessLookupError):
+                process.terminate()
+        try:
+            async with asyncio.timeout(self._terminate_grace_seconds):
+                await process.wait()
+        except TimeoutError:
+            with suppress(ProcessLookupError):
+                process.kill()
+            await process.wait()
+        await asyncio.gather(stdout_drain, stderr_task, return_exceptions=True)
+
     async def _capture_bounded_output(
         self,
         process: asyncio.subprocess.Process,
@@ -535,6 +684,22 @@ async def _drain_process(process: asyncio.subprocess.Process) -> None:
         discard(process.stdout),
         discard(process.stderr),
     )
+
+
+async def _discard_stream(stream: asyncio.StreamReader | None) -> None:
+    if stream is None:
+        return
+    while await stream.read(_STREAM_READ_BYTES):
+        pass
+
+
+async def _read_stream_diagnostics(stream: asyncio.StreamReader) -> bytes:
+    captured = bytearray()
+    while chunk := await stream.read(_STREAM_READ_BYTES):
+        remaining = _MAX_STREAM_DIAGNOSTIC_BYTES - len(captured)
+        if remaining > 0:
+            captured.extend(chunk[:remaining])
+    return bytes(captured)
 
 
 def _safe_command_type(remote_executable: str, command_type: str | None) -> str:

@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" width="800" height="220" role="img" aria-label="cluster-monitor banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101a18"/>
+      <stop offset="55%" stop-color="#0d1513"/>
+      <stop offset="100%" stop-color="#09110f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="18%" cy="12%" r="70%">
+      <stop offset="0%" stop-color="#5bcdb0" stop-opacity="0.16"/>
+      <stop offset="45%" stop-color="#5bcdb0" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#5bcdb0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#157568"/>
+      <stop offset="100%" stop-color="#5bcdb0"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14201d"/>
+      <stop offset="100%" stop-color="#0f1917"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1b2a26" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="800" height="220" rx="16" fill="url(#bg)"/>
+  <rect width="800" height="220" rx="16" fill="url(#glow)"/>
+  <rect width="800" height="220" rx="16" fill="url(#grid)" opacity="0.6"/>
+  <rect x="1" y="1" width="798" height="218" rx="15" fill="none" stroke="#2b3f39" stroke-width="1"/>
+
+  <!-- Terminal / dashboard window -->
+  <g transform="translate(64, 58)">
+    <rect x="0" y="0" width="256" height="118" rx="10" fill="url(#card)" stroke="#294139" stroke-width="1.5"/>
+    <!-- Title bar -->
+    <rect x="0" y="0" width="256" height="30" rx="10" fill="#1c2d29"/>
+    <rect x="0" y="16" width="256" height="14" fill="#1c2d29"/>
+    <circle cx="14" cy="15" r="4" fill="#a13b3b"/>
+    <circle cx="28" cy="15" r="4" fill="#9a6307"/>
+    <circle cx="42" cy="15" r="4" fill="#157568"/>
+    <text x="66" y="19.5" font-family="Menlo, Monaco, monospace" font-size="11" fill="#7f9690">cluster-monitor — :8000</text>
+
+    <!-- Node blocks -->
+    <g font-family="Menlo, Monaco, monospace" font-size="10" fill="#9aaba5">
+      <rect x="14" y="42" width="108" height="30" rx="6" fill="#12231e" stroke="#26423a"/>
+      <text x="24" y="54" fill="#5bcdb0">node01</text>
+      <text x="24" y="66" fill="#7f9690" font-size="9">8 cores · running</text>
+      <rect x="134" y="42" width="108" height="30" rx="6" fill="#12231e" stroke="#26423a"/>
+      <text x="144" y="54" fill="#5bcdb0">node02</text>
+      <text x="144" y="66" fill="#7f9690" font-size="9">8 cores · running</text>
+      <rect x="14" y="80" width="108" height="30" rx="6" fill="#12231e" stroke="#26423a"/>
+      <text x="24" y="92" fill="#e7bb64">node03</text>
+      <text x="24" y="104" fill="#7f9690" font-size="9">8 cores · drain</text>
+      <rect x="134" y="80" width="108" height="30" rx="6" fill="#12231e" stroke="#26423a"/>
+      <text x="144" y="92" fill="#5bcdb0">node04</text>
+      <text x="144" y="104" fill="#7f9690" font-size="9">8 cores · running</text>
+    </g>
+  </g>
+
+  <!-- Sparkline -->
+  <g transform="translate(348, 168)">
+    <path d="M 0 26 L 22 22 L 44 24 L 66 16 L 88 18 L 110 10 L 132 14 L 154 8 L 176 10 L 198 4 L 220 6 L 242 0"
+          fill="none" stroke="#157568" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+    <path d="M 0 26 L 22 22 L 44 24 L 66 16 L 88 18 L 110 10 L 132 14 L 154 8 L 176 10 L 198 4 L 220 6 L 242 0"
+          fill="none" stroke="#5bcdb0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="242" cy="0" r="3.5" fill="#5bcdb0"/>
+    <circle cx="242" cy="0" r="7" fill="#5bcdb0" opacity="0.25"/>
+  </g>
+
+  <!-- Title -->
+  <text x="348" y="96" font-family="'SF Mono', 'Cascadia Code', Menlo, Monaco, monospace" font-size="46" font-weight="700" fill="#e4eeeb" letter-spacing="0.5">
+    cluster<tspan fill="#5bcdb0">-monitor</tspan>
+  </text>
+  <text x="348" y="122" font-family="'SF Mono', 'Cascadia Code', Menlo, Monaco, monospace" font-size="16" fill="#9aaba5">
+    Slurm cluster monitoring over your OpenSSH.
+  </text>
+
+  <!-- Status pills -->
+  <g font-family="'SF Mono', Menlo, Monaco, monospace" font-size="11" fill="#d7e5e0">
+    <rect x="348" y="134" width="74" height="24" rx="12" fill="#12231e" stroke="#26423a"/>
+    <g transform="translate(385, 150)">
+      <g transform="translate(-19.5, -4)">
+        <rect x="-6" y="-6" width="6" height="6" rx="1" fill="#5bcdb0"/>
+        <rect x="0" y="-6" width="6" height="6" rx="1" fill="#5bcdb0" opacity="0.55"/>
+        <rect x="-6" y="0" width="6" height="6" rx="1" fill="#5bcdb0" opacity="0.55"/>
+        <rect x="0" y="0" width="6" height="6" rx="1" fill="#5bcdb0"/>
+      </g>
+      <text x="9" y="0" text-anchor="middle">Slurm</text>
+    </g>
+    <rect x="430" y="134" width="88" height="24" rx="12" fill="#12231e" stroke="#26423a"/>
+    <g transform="translate(474, 150)">
+      <g transform="translate(-26.1, -4)">
+        <rect x="-7" y="-5" width="14" height="10" rx="2" fill="none" stroke="#5bcdb0" stroke-width="1.5"/>
+        <path d="M -4.5 -2 L -1.5 0 L -4.5 2" fill="none" stroke="#5bcdb0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="0.5" y1="2" x2="4.5" y2="2" stroke="#5bcdb0" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+      <text x="10" y="0" text-anchor="middle">OpenSSH</text>
+    </g>
+    <rect x="526" y="134" width="62" height="24" rx="12" fill="#12231e" stroke="#26423a"/>
+    <g transform="translate(557, 150)">
+      <circle cx="-16.2" cy="-4" r="4" fill="#5bcdb0"/>
+      <text x="7" y="0" text-anchor="middle">live</text>
+    </g>
+  </g>
+
+  <rect x="0" y="210" width="800" height="10" rx="5" fill="url(#accent)"/>
+</svg>

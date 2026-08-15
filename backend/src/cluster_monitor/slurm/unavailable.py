@@ -8,14 +8,20 @@ from cluster_monitor.models import (
     BackendType,
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     ConnectionStatus,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogSession,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
 )
 
 
@@ -40,6 +46,7 @@ class UnavailableSshSlurmBackend:
             backend=BackendType.SSH,
             connection_status=ConnectionStatus.UNAVAILABLE,
             job_actions_enabled=self._config.allow_job_actions,
+            file_browser_enabled=self._config.allow_file_browsing,
             last_error=self._MESSAGE,
         )
 
@@ -52,11 +59,32 @@ class UnavailableSshSlurmBackend:
     async def get_nodes(self) -> list[Node]:
         raise self._unavailable()
 
+    async def get_topology(self) -> ClusterTopology:
+        raise self._unavailable()
+
+    async def list_remote_directory(
+        self,
+        request: RemoteDirectoryRequest,
+    ) -> RemoteDirectory:
+        del request
+        raise self._unavailable()
+
+    async def preview_remote_file(
+        self,
+        request: RemoteFilePreviewRequest,
+    ) -> RemoteFilePreview:
+        del request
+        raise self._unavailable()
+
     async def get_jobs(self, user: str | None = None) -> list[Job]:
         del user
         raise self._unavailable()
 
     async def get_job(self, job_id: str) -> JobDetails:
+        del job_id
+        raise self._unavailable()
+
+    async def open_job_log_stream(self, job_id: str) -> JobLogSession:
         del job_id
         raise self._unavailable()
 

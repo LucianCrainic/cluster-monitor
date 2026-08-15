@@ -13,6 +13,7 @@ clusters:
     name: Local Mock Cluster
     backend: mock
     allow_job_actions: true
+    allow_file_browsing: true
 
   - id: sapienza
     name: Sapienza HPC Cluster
@@ -21,3 +22,4 @@ clusters:
     slurm_user: current
     command_timeout_seconds: 15
     allow_job_actions: false
+    allow_file_browsing: false

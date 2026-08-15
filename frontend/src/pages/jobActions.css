@@ -43,6 +43,74 @@
   gap: 18px;
 }
 
+.preparation-workspace,
+.remote-script-confirmation {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.preparation-workspace__toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: inherit;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.preparation-workspace__toggle span,
+.preparation-workspace__toggle strong {
+  display: block;
+}
+
+.preparation-workspace__toggle .section-eyebrow {
+  margin-bottom: 4px;
+}
+
+.preparation-workspace__tabs {
+  width: max-content;
+  margin: 0 20px;
+}
+
+.preparation-workspace__panel {
+  padding: 16px 20px 20px;
+}
+
+.preparation-workspace__intro p {
+  margin: 4px 0 14px;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.remote-script-confirmation {
+  padding: 20px;
+  border-color: color-mix(in srgb, var(--amber) 35%, var(--line));
+}
+
+.remote-script-confirmation h2 {
+  margin-bottom: 7px;
+  font-size: 18px;
+}
+
+.remote-script-confirmation p:not(.section-eyebrow) {
+  max-width: 760px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.remote-script-confirmation code {
+  color: var(--ink);
+}
+
 .job-action-card,
 .job-review,
 .job-cancel-confirmation,

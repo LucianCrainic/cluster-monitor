@@ -65,6 +65,76 @@ class JobNotFoundError(ClusterMonitorError):
         )
 
 
+class JobLogAccessForbiddenError(ClusterMonitorError):
+    """The SSH identity is not allowed to read the requested job output."""
+
+    code = "job_log_access_forbidden"
+    status_code = 403
+
+    def __init__(self, cluster_id: str, job_id: str) -> None:
+        super().__init__(
+            "Logs can only be viewed for jobs owned by the remote SSH user.",
+            cluster_id=cluster_id,
+            details={"job_id": job_id},
+        )
+
+
+class JobLogIdentifierUnsupportedError(ClusterMonitorError):
+    """A log request targets a Slurm identifier outside the supported scope."""
+
+    code = "job_log_identifier_unsupported"
+    status_code = 422
+
+    def __init__(self, cluster_id: str, job_id: str) -> None:
+        super().__init__(
+            "Log viewing supports allocation IDs and explicit numeric array-task IDs only.",
+            cluster_id=cluster_id,
+            details={"job_id": job_id},
+        )
+
+
+class JobLogScopeAmbiguousError(ClusterMonitorError):
+    """One identifier would resolve to more than one output file."""
+
+    code = "job_log_scope_ambiguous"
+    status_code = 409
+
+    def __init__(self, cluster_id: str, job_id: str) -> None:
+        super().__init__(
+            "Select an individual array task to view its logs.",
+            cluster_id=cluster_id,
+            details={"job_id": job_id},
+        )
+
+
+class JobLogScopeUnsupportedError(ClusterMonitorError):
+    """Resolved metadata identifies an unsupported multi-component job."""
+
+    code = "job_log_scope_unsupported"
+    status_code = 409
+
+    def __init__(self, cluster_id: str, job_id: str) -> None:
+        super().__init__(
+            "Log viewing does not support heterogeneous job components.",
+            cluster_id=cluster_id,
+            details={"job_id": job_id, "scope": "heterogeneous"},
+        )
+
+
+class JobLogUnavailableError(ClusterMonitorError):
+    """Slurm has no safely readable output for the requested job."""
+
+    code = "job_log_unavailable"
+    status_code = 409
+
+    def __init__(self, cluster_id: str, job_id: str, message: str | None = None) -> None:
+        super().__init__(
+            message or "No readable output file is available for this job.",
+            cluster_id=cluster_id,
+            details={"job_id": job_id},
+        )
+
+
 class JobActionForbiddenError(ClusterMonitorError):
     """A mutation was requested for a job owned by another user."""
 
@@ -144,4 +214,53 @@ class JobActionUncertainError(ClusterMonitorError):
             message,
             cluster_id=cluster_id,
             details={"action": action, **({"job_id": job_id} if job_id else {})},
+        )
+
+
+class FileBrowsingDisabledError(ClusterMonitorError):
+    """A cluster has not opted into read-only filesystem access."""
+
+    code = "file_browser_disabled"
+    status_code = 403
+
+    def __init__(self, cluster_id: str) -> None:
+        super().__init__(
+            "Read-only remote file browsing is disabled for this cluster.",
+            cluster_id=cluster_id,
+        )
+
+
+class RemotePathInvalidError(ClusterMonitorError):
+    """A requested remote path cannot be used for the requested operation."""
+
+    code = "remote_path_invalid"
+    status_code = 422
+
+    def __init__(self, cluster_id: str, message: str | None = None) -> None:
+        super().__init__(
+            message or "The remote path is not valid for this operation.",
+            cluster_id=cluster_id,
+        )
+
+
+class RemotePathNotFoundError(ClusterMonitorError):
+    """A requested remote path does not exist."""
+
+    code = "remote_path_not_found"
+    status_code = 404
+
+    def __init__(self, cluster_id: str) -> None:
+        super().__init__("The remote path was not found.", cluster_id=cluster_id)
+
+
+class RemotePathForbiddenError(ClusterMonitorError):
+    """Unix permissions deny the requested read operation."""
+
+    code = "remote_path_forbidden"
+    status_code = 403
+
+    def __init__(self, cluster_id: str) -> None:
+        super().__init__(
+            "The remote SSH user cannot read this path.",
+            cluster_id=cluster_id,
         )

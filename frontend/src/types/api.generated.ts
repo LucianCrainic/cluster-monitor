@@ -10,8 +10,9 @@ export interface components {
     ApiErrorResponse: { error: components["schemas"]["ApiError"]; };
     BackendType: "mock" | "ssh";
     ClientSettings: { default_cluster_id: string; refresh: components["schemas"]["RefreshSettings"]; };
-    Cluster: { backend: components["schemas"]["BackendType"]; connection_status: components["schemas"]["ConnectionStatus"]; id: string; job_actions_enabled?: boolean; last_error?: string | null; last_successful_refresh?: string | null; name: string; slurm_version?: string | null; };
+    Cluster: { backend: components["schemas"]["BackendType"]; connection_status: components["schemas"]["ConnectionStatus"]; file_browser_enabled?: boolean; id: string; job_actions_enabled?: boolean; last_error?: string | null; last_successful_refresh?: string | null; name: string; slurm_version?: string | null; };
     ClusterOverview: { allocated_nodes: number; cluster_id: string; connection_status: components["schemas"]["ConnectionStatus"]; idle_nodes: number; last_error?: string | null; last_refresh?: string | null; pending_jobs: number; running_jobs: number; slurm_version?: string | null; total_nodes: number; unavailable_nodes: number; };
+    ClusterTopology: { captured_at: string; cluster_id: string; groups?: Array<components["schemas"]["TopologyGroup"]>; kind: components["schemas"]["TopologyKind"]; nodes: Array<components["schemas"]["Node"]>; partitions: Array<components["schemas"]["Partition"]>; };
     ConnectionStatus: "connected" | "unavailable" | "unknown";
     HealthResponse: { service?: "cluster-monitor"; status?: "ok"; version: string; };
     Job: { array_job_id?: string | null; array_task_id?: string | null; elapsed_seconds: number; end_time?: string | null; heterogeneous_job_id?: string | null; heterogeneous_job_offset?: number | null; job_id: string; job_name: string; node_list?: Array<string>; nodes: number; partition: string; reason?: string | null; requested_cpus: number; requested_gpus?: number | null; requested_memory_mb?: number | null; start_time?: string | null; state: components["schemas"]["JobState"]; state_raw: string; submit_time?: string | null; time_limit_seconds?: number | null; user: string; };
@@ -20,9 +21,19 @@ export interface components {
     JobState: "pending" | "running" | "completed" | "failed" | "cancelled" | "timeout" | "out_of_memory" | "suspended" | "unknown";
     JobSubmissionReceipt: { cluster_id: string; job_id: string; scheduler_cluster?: string | null; status?: "submitted"; submitted_at: string; };
     JobSubmissionRequest: { cpus_per_task?: number; gpus_per_node?: number; job_name: string; memory_mb?: number | null; nodes?: number; partition?: string | null; script: string; time_limit_minutes?: number; };
-    Node: { allocated_cpus: number; allocated_memory_mb?: number | null; cpu_count: number; generic_resources?: Array<string>; gpu_resources?: Array<string>; memory_mb: number; name: string; partition_names?: Array<string>; reason?: string | null; state: components["schemas"]["NodeState"]; state_raw: string; };
+    Node: { active_features?: Array<string>; allocated_cpus: number; allocated_generic_resources?: Array<string>; allocated_memory_mb?: number | null; configured_features?: Array<string>; cores_per_socket?: number | null; cpu_count: number; cpu_load?: number | null; free_memory_mb?: number | null; generic_resources?: Array<string>; gpu_resources?: Array<string>; memory_mb: number; name: string; partition_names?: Array<string>; reason?: string | null; sockets?: number | null; state: components["schemas"]["NodeState"]; state_raw: string; threads_per_core?: number | null; };
     NodeState: "idle" | "allocated" | "mixed" | "drained" | "down" | "completing" | "unknown";
-    Partition: { allocated_node_count: number; availability: boolean; idle_node_count: number; name: string; node_count: number; other_node_count: number; state: string; time_limit?: string | null; };
+    Partition: { allocated_node_count: number; availability: boolean; default_memory_mb_per_cpu?: number | null; default_memory_mb_per_node?: number | null; idle_node_count: number; is_default?: boolean; maximum_cpus_per_node?: number | null; maximum_nodes?: number | null; maximum_time_minutes?: number | null; minimum_nodes?: number | null; name: string; node_count: number; node_names?: Array<string>; other_node_count: number; qos?: Array<string>; state: string; time_limit?: string | null; };
     RefreshSettings: { history_seconds?: number; jobs_seconds?: number; nodes_seconds?: number; overview_seconds?: number; partitions_seconds?: number; };
+    RemoteDirectory: { cluster_id: string; entries: Array<components["schemas"]["RemoteFileEntry"]>; parent_path: string | null; path: string; truncated?: boolean; };
+    RemoteDirectoryRequest: { path?: string | null; show_hidden?: boolean; };
+    RemoteFileEntry: { kind: components["schemas"]["RemoteFileKind"]; modified_at: string; name: string; path: string; permissions: string; readable: boolean; size_bytes: number; symlink_target?: string | null; target_kind?: components["schemas"]["RemoteFileKind"] | null; };
+    RemoteFileKind: "file" | "directory" | "symlink" | "other";
+    RemoteFilePreview: { cluster_id: string; content?: string | null; kind: components["schemas"]["RemoteFileKind"]; language?: string | null; modified_at: string; name: string; path: string; permissions: string; size_bytes: number; status: components["schemas"]["RemotePreviewStatus"]; symlink_target?: string | null; };
+    RemoteFilePreviewRequest: { path: string; };
+    RemotePreviewStatus: "available" | "binary" | "too_large" | "special";
+    TopologyGroup: { child_group_ids?: Array<string>; id: string; kind: components["schemas"]["TopologyGroupKind"]; link_speed?: string | null; name: string; node_names?: Array<string>; };
+    TopologyGroupKind: "switch" | "block" | "ring";
+    TopologyKind: "flat" | "tree" | "block" | "ring" | "unknown";
   };
 }

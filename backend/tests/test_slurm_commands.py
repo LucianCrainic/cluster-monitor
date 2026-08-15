@@ -10,17 +10,22 @@ import pytest
 from cluster_monitor.connection import build_remote_command
 from cluster_monitor.models import JobSubmissionRequest
 from cluster_monitor.slurm.commands import (
+    build_file_test_command,
     build_nodes_json_command,
     build_nodes_text_command,
     build_partitions_json_command,
     build_partitions_text_command,
     build_remote_user_command,
+    build_sacct_job_logs_text_command,
     build_sacct_json_command,
     build_sacct_text_command,
     build_sbatch_command,
     build_scancel_command,
+    build_scontrol_job_json_command,
+    build_scontrol_job_text_command,
     build_squeue_json_command,
     build_squeue_text_command,
+    build_tail_command,
 )
 from cluster_monitor.slurm.text_parser import (
     NODE_SINFO_FORMAT,
@@ -80,6 +85,37 @@ def test_targeted_accounting_commands_validate_job_ids() -> None:
 
     with pytest.raises(ValueError):
         build_sacct_json_command("researcher", job_id="123; squeue")
+
+
+def test_job_log_commands_are_fixed_and_keep_paths_in_one_argument() -> None:
+    path = "/home/researcher/logs/a b;$(touch nope).out"
+
+    assert build_scontrol_job_json_command("12345_7").arguments == (
+        "--json",
+        "show",
+        "job",
+        "12345_7",
+    )
+    assert build_scontrol_job_text_command("12345_7").arguments[-1] == "12345_7"
+    assert (
+        "--expand-patterns" in build_sacct_job_logs_text_command("researcher", "12345_7").arguments
+    )
+    assert build_file_test_command(path, "readable").arguments == ("-r", path)
+    tail = build_tail_command(path, initial_lines=200, follow=True)
+    assert tail.executable == "tail"
+    assert tail.arguments == (
+        "--lines=200",
+        "--follow=name",
+        "--retry",
+        "--",
+        path,
+    )
+    assert build_remote_command(tail.executable, tail.arguments).endswith(
+        "'/home/researcher/logs/a b;$(touch nope).out'"
+    )
+
+    with pytest.raises(ValueError):
+        build_scontrol_job_json_command("123.batch")
 
 
 def test_submission_command_uses_validated_options_and_stdin_script_boundary() -> None:

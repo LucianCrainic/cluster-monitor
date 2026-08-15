@@ -8,11 +8,15 @@ import { ThemeToggle } from "./ThemeToggle";
 const navigation = [
   { to: "/", label: "Overview", icon: "◫", end: true },
   { to: "/jobs", label: "Jobs", icon: "≡", end: false },
+  { to: "/history", label: "History", icon: "↶", end: true },
+  { to: "/topology", label: "Topology", icon: "⌘", end: true },
+  { to: "/files", label: "Files", icon: "▤", end: true },
 ] as const;
 
 export function AppShell() {
   const { clusters, selectedCluster, isLoading, error, refetch } = useCluster();
   const actionsEnabled = selectedCluster?.job_actions_enabled === true;
+  const filesEnabled = selectedCluster?.file_browser_enabled === true;
 
   return (
     <div className="app-shell">
@@ -54,6 +58,10 @@ export function AppShell() {
           <span className="cluster-action-status">
             <span aria-hidden="true">●</span>
             {actionsEnabled ? "Job actions enabled" : "Monitoring only"}
+          </span>
+          <span className="cluster-action-status">
+            <span aria-hidden="true">●</span>
+            {filesEnabled ? "Read-only files enabled" : "Files disabled"}
           </span>
           <small>SSH credentials stay on this computer.</small>
         </div>

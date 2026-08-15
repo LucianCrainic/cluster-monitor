@@ -131,6 +131,11 @@
           "connection_status": {
             "$ref": "#/components/schemas/ConnectionStatus"
           },
+          "file_browser_enabled": {
+            "default": false,
+            "title": "File Browser Enabled",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -274,6 +279,53 @@
           "pending_jobs"
         ],
         "title": "ClusterOverview",
+        "type": "object"
+      },
+      "ClusterTopology": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TopologyKind"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/Partition"
+            },
+            "title": "Partitions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "kind",
+          "partitions",
+          "nodes",
+          "captured_at"
+        ],
+        "title": "ClusterTopology",
         "type": "object"
       },
       "ConnectionStatus": {
@@ -946,10 +998,24 @@
       "Node": {
         "additionalProperties": false,
         "properties": {
+          "active_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Features",
+            "type": "array"
+          },
           "allocated_cpus": {
             "minimum": 0.0,
             "title": "Allocated Cpus",
             "type": "integer"
+          },
+          "allocated_generic_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allocated Generic Resources",
+            "type": "array"
           },
           "allocated_memory_mb": {
             "anyOf": [
@@ -963,10 +1029,53 @@
             ],
             "title": "Allocated Memory Mb"
           },
+          "configured_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured Features",
+            "type": "array"
+          },
+          "cores_per_socket": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cores Per Socket"
+          },
           "cpu_count": {
             "minimum": 0.0,
             "title": "Cpu Count",
             "type": "integer"
+          },
+          "cpu_load": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpu Load"
+          },
+          "free_memory_mb": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Memory Mb"
           },
           "generic_resources": {
             "items": {
@@ -1009,12 +1118,36 @@
             ],
             "title": "Reason"
           },
+          "sockets": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sockets"
+          },
           "state": {
             "$ref": "#/components/schemas/NodeState"
           },
           "state_raw": {
             "title": "State Raw",
             "type": "string"
+          },
+          "threads_per_core": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threads Per Core"
           }
         },
         "required": [
@@ -1053,10 +1186,87 @@
             "title": "Availability",
             "type": "boolean"
           },
+          "default_memory_mb_per_cpu": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Memory Mb Per Cpu"
+          },
+          "default_memory_mb_per_node": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Memory Mb Per Node"
+          },
           "idle_node_count": {
             "minimum": 0.0,
             "title": "Idle Node Count",
             "type": "integer"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "maximum_cpus_per_node": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Cpus Per Node"
+          },
+          "maximum_nodes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Nodes"
+          },
+          "maximum_time_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Time Minutes"
+          },
+          "minimum_nodes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Nodes"
           },
           "name": {
             "title": "Name",
@@ -1067,10 +1277,24 @@
             "title": "Node Count",
             "type": "integer"
           },
+          "node_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Names",
+            "type": "array"
+          },
           "other_node_count": {
             "minimum": 0.0,
             "title": "Other Node Count",
             "type": "integer"
+          },
+          "qos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Qos",
+            "type": "array"
           },
           "state": {
             "title": "State",
@@ -1141,6 +1365,323 @@
         },
         "title": "RefreshSettings",
         "type": "object"
+      },
+      "RemoteDirectory": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RemoteFileEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "parent_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Path"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "path",
+          "parent_path",
+          "entries"
+        ],
+        "title": "RemoteDirectory",
+        "type": "object"
+      },
+      "RemoteDirectoryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "show_hidden": {
+            "default": false,
+            "title": "Show Hidden",
+            "type": "boolean"
+          }
+        },
+        "title": "RemoteDirectoryRequest",
+        "type": "object"
+      },
+      "RemoteFileEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RemoteFileKind"
+          },
+          "modified_at": {
+            "format": "date-time",
+            "title": "Modified At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permissions": {
+            "title": "Permissions",
+            "type": "string"
+          },
+          "readable": {
+            "title": "Readable",
+            "type": "boolean"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "symlink_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symlink Target"
+          },
+          "target_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RemoteFileKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "kind",
+          "size_bytes",
+          "modified_at",
+          "permissions",
+          "readable"
+        ],
+        "title": "RemoteFileEntry",
+        "type": "object"
+      },
+      "RemoteFileKind": {
+        "enum": [
+          "file",
+          "directory",
+          "symlink",
+          "other"
+        ],
+        "title": "RemoteFileKind",
+        "type": "string"
+      },
+      "RemoteFilePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RemoteFileKind"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "modified_at": {
+            "format": "date-time",
+            "title": "Modified At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permissions": {
+            "title": "Permissions",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RemotePreviewStatus"
+          },
+          "symlink_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symlink Target"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "path",
+          "name",
+          "kind",
+          "size_bytes",
+          "modified_at",
+          "permissions",
+          "status"
+        ],
+        "title": "RemoteFilePreview",
+        "type": "object"
+      },
+      "RemoteFilePreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "RemoteFilePreviewRequest",
+        "type": "object"
+      },
+      "RemotePreviewStatus": {
+        "enum": [
+          "available",
+          "binary",
+          "too_large",
+          "special"
+        ],
+        "title": "RemotePreviewStatus",
+        "type": "string"
+      },
+      "TopologyGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "child_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Child Group Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TopologyGroupKind"
+          },
+          "link_speed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Speed"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "TopologyGroup",
+        "type": "object"
+      },
+      "TopologyGroupKind": {
+        "enum": [
+          "switch",
+          "block",
+          "ring"
+        ],
+        "title": "TopologyGroupKind",
+        "type": "string"
+      },
+      "TopologyKind": {
+        "enum": [
+          "flat",
+          "tree",
+          "block",
+          "ring",
+          "unknown"
+        ],
+        "title": "TopologyKind",
+        "type": "string"
       }
     }
   },
@@ -1323,6 +1864,210 @@
           }
         },
         "summary": "Get Cluster"
+      }
+    },
+    "/api/clusters/{cluster_id}/files/list": {
+      "post": {
+        "operationId": "list_remote_directory_api_clusters__cluster_id__files_list_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoteDirectoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteDirectory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "List Remote Directory"
+      }
+    },
+    "/api/clusters/{cluster_id}/files/preview": {
+      "post": {
+        "operationId": "preview_remote_file_api_clusters__cluster_id__files_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoteFilePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteFilePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Preview Remote File"
       }
     },
     "/api/clusters/{cluster_id}/history": {
@@ -1973,6 +2718,106 @@
         "summary": "Get Job"
       }
     },
+    "/api/clusters/{cluster_id}/jobs/{job_id}/logs/stream": {
+      "get": {
+        "operationId": "stream_job_logs_api_clusters__cluster_id__jobs__job_id__logs_stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[1-9][0-9]*(?:_[0-9]+)?$",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Path-free Server-Sent Events carrying job output."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Stream Job Logs"
+      }
+    },
     "/api/clusters/{cluster_id}/nodes": {
       "get": {
         "operationId": "get_nodes_api_clusters__cluster_id__nodes_get",
@@ -2289,6 +3134,98 @@
           }
         },
         "summary": "Get Partitions"
+      }
+    },
+    "/api/clusters/{cluster_id}/topology": {
+      "get": {
+        "operationId": "get_topology_api_clusters__cluster_id__topology_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cluster_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+              "title": "Cluster Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterTopology"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Get Topology"
       }
     },
     "/api/health": {

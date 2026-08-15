@@ -16,7 +16,9 @@ export type JobSortKey =
   | "elapsed_seconds"
   | "time_limit_seconds"
   | "requested_cpus"
-  | "requested_gpus";
+  | "requested_gpus"
+  | "submit_time"
+  | "end_time";
 
 export type SortDirection = "ascending" | "descending";
 
@@ -102,7 +104,7 @@ function sortValue(job: Job, key: JobSortKey): string | number {
   ) {
     return job[key] ?? -1;
   }
-  return job[key];
+  return job[key] ?? "";
 }
 
 export function filterAndSortJobs(

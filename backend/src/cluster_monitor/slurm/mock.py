@@ -3,32 +3,71 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 
 from cluster_monitor.config import ClusterConfig
 from cluster_monitor.exceptions import (
+    FileBrowsingDisabledError,
     JobActionRejectedError,
     JobActionsDisabledError,
     JobNotFoundError,
+    RemotePathInvalidError,
+    RemotePathNotFoundError,
 )
 from cluster_monitor.models import (
     AccountingInfo,
     BackendType,
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     ConnectionStatus,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogChunkEvent,
+    JobLogCompleteEvent,
+    JobLogEvent,
+    JobLogMetadataEvent,
+    JobLogSession,
+    JobLogSource,
+    JobLogStatusEvent,
     JobState,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     NodeState,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFileEntry,
+    RemoteFileKind,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
+    RemotePreviewStatus,
+    TopologyGroup,
+    TopologyGroupKind,
+    TopologyKind,
 )
+from cluster_monitor.slurm.remote_files import validate_remote_path
 
 _MOCK_NOW = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
+_MOCK_FILES: dict[str, str] = {
+    "/home/student/project/job.sh": (
+        '#!/bin/bash\n#SBATCH --job-name=demo\n\necho "Starting job"\nsrun hostname\n'
+    ),
+    "/home/student/project/config.yaml": "epochs: 12\nlearning_rate: 0.001\n",
+    "/home/student/logs/11998.out": "Preprocessing complete\n",
+    "/home/student/.profile": "export EDITOR=vim\n",
+}
+_MOCK_DIRECTORIES = {
+    "/",
+    "/home",
+    "/home/student",
+    "/home/student/project",
+    "/home/student/logs",
+}
 
 
 class MockSlurmBackend:
@@ -57,6 +96,7 @@ class MockSlurmBackend:
             backend=BackendType.MOCK,
             connection_status=ConnectionStatus.CONNECTED,
             job_actions_enabled=self._config.allow_job_actions,
+            file_browser_enabled=self._config.allow_file_browsing,
             slurm_version="24.05.4-mock",
             last_successful_refresh=_MOCK_NOW,
         )
@@ -88,6 +128,111 @@ class MockSlurmBackend:
         await self._delay()
         return [node.model_copy(deep=True) for node in self._nodes]
 
+    async def get_topology(self) -> ClusterTopology:
+        await self._delay()
+        return ClusterTopology(
+            cluster_id=self._config.id,
+            kind=TopologyKind.TREE,
+            partitions=[partition.model_copy(deep=True) for partition in self._partitions],
+            nodes=[node.model_copy(deep=True) for node in self._nodes],
+            groups=[
+                TopologyGroup(
+                    id="switch:core",
+                    name="core",
+                    kind=TopologyGroupKind.SWITCH,
+                    child_group_ids=["switch:cpu", "switch:gpu"],
+                    node_names=[],
+                ),
+                TopologyGroup(
+                    id="switch:cpu",
+                    name="cpu",
+                    kind=TopologyGroupKind.SWITCH,
+                    node_names=["cpu001", "cpu002", "cpu003"],
+                ),
+                TopologyGroup(
+                    id="switch:gpu",
+                    name="gpu",
+                    kind=TopologyGroupKind.SWITCH,
+                    node_names=["gpu001"],
+                ),
+            ],
+            captured_at=_MOCK_NOW,
+        )
+
+    async def list_remote_directory(
+        self,
+        request: RemoteDirectoryRequest,
+    ) -> RemoteDirectory:
+        await self._delay()
+        self._require_file_browsing()
+        validate_remote_path(request.path, self._config.id, allow_login_directory=True)
+        path = request.path or "/home/student"
+        if path not in _MOCK_DIRECTORIES:
+            if path in _MOCK_FILES:
+                raise RemotePathInvalidError(self._config.id, "The remote path is not a directory.")
+            raise RemotePathNotFoundError(self._config.id)
+        entries: list[RemoteFileEntry] = []
+        for directory in _MOCK_DIRECTORIES:
+            if directory == path or str(PurePosixPath(directory).parent) != path:
+                continue
+            entries.append(self._mock_entry(directory, RemoteFileKind.DIRECTORY))
+        for file_path, content in _MOCK_FILES.items():
+            if str(PurePosixPath(file_path).parent) != path:
+                continue
+            if not request.show_hidden and PurePosixPath(file_path).name.startswith("."):
+                continue
+            entries.append(self._mock_entry(file_path, RemoteFileKind.FILE, len(content.encode())))
+        entries.sort(
+            key=lambda entry: (entry.kind is not RemoteFileKind.DIRECTORY, entry.name.casefold())
+        )
+        return RemoteDirectory(
+            cluster_id=self._config.id,
+            path=path,
+            parent_path=None if path == "/" else str(PurePosixPath(path).parent),
+            entries=entries,
+            truncated=False,
+        )
+
+    async def preview_remote_file(
+        self,
+        request: RemoteFilePreviewRequest,
+    ) -> RemoteFilePreview:
+        await self._delay()
+        self._require_file_browsing()
+        validate_remote_path(request.path, self._config.id, allow_login_directory=False)
+        content = _MOCK_FILES.get(request.path)
+        if content is None:
+            if request.path in _MOCK_DIRECTORIES:
+                return RemoteFilePreview(
+                    cluster_id=self._config.id,
+                    path=request.path,
+                    name=PurePosixPath(request.path).name or "/",
+                    kind=RemoteFileKind.DIRECTORY,
+                    size_bytes=0,
+                    modified_at=_MOCK_NOW,
+                    permissions="drwxr-xr-x",
+                    status=RemotePreviewStatus.SPECIAL,
+                )
+            raise RemotePathNotFoundError(self._config.id)
+        suffix = PurePosixPath(request.path).suffix.casefold()
+        language = {
+            ".sh": "shell",
+            ".yaml": "yaml",
+            ".yml": "yaml",
+        }.get(suffix, "text")
+        return RemoteFilePreview(
+            cluster_id=self._config.id,
+            path=request.path,
+            name=PurePosixPath(request.path).name,
+            kind=RemoteFileKind.FILE,
+            size_bytes=len(content.encode()),
+            modified_at=_MOCK_NOW,
+            permissions="-rw-r--r--",
+            status=RemotePreviewStatus.AVAILABLE,
+            content=content,
+            language=language,
+        )
+
     async def get_jobs(self, user: str | None = None) -> list[Job]:
         await self._delay()
         selected_user = self._user if user is None else user
@@ -99,6 +244,59 @@ class MockSlurmBackend:
         if details is None:
             raise JobNotFoundError(self._config.id, job_id)
         return details.model_copy(deep=True)
+
+    async def open_job_log_stream(self, job_id: str) -> JobLogSession:
+        details = await self.get_job(job_id)
+
+        async def events() -> AsyncIterator[JobLogEvent]:
+            combined = details.standard_output_path == details.standard_error_path
+            sources: list[JobLogSource] = ["combined"] if combined else ["stdout", "stderr"]
+            yield JobLogMetadataEvent(
+                job_id=job_id,
+                state=details.state,
+                sources=sources,
+                initial_lines=200,
+            )
+            if details.state is JobState.PENDING:
+                yield JobLogStatusEvent(
+                    status="waiting",
+                    message="Waiting for Slurm to create the job output files.",
+                )
+                await self._delay()
+            if details.state in {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED}:
+                yield JobLogStatusEvent(
+                    status="finalizing",
+                    message="Loading the final job output.",
+                )
+            else:
+                yield JobLogStatusEvent(status="live", message="Following live job output.")
+            if combined:
+                yield JobLogChunkEvent(
+                    source="combined",
+                    sequence=1,
+                    text=f"[{job_id}] mock combined job output\n",
+                )
+            else:
+                yield JobLogChunkEvent(
+                    source="stdout",
+                    sequence=1,
+                    text=f"[{job_id}] mock standard output\n",
+                )
+                yield JobLogChunkEvent(
+                    source="stderr",
+                    sequence=2,
+                    text=f"[{job_id}] mock standard error\n",
+                )
+            terminal = details.state in {
+                JobState.COMPLETED,
+                JobState.FAILED,
+                JobState.CANCELLED,
+                JobState.TIMEOUT,
+                JobState.OUT_OF_MEMORY,
+            }
+            yield JobLogCompleteEvent(reason="snapshot_complete" if terminal else "job_finished")
+
+        return JobLogSession(events=events())
 
     async def get_recent_jobs(
         self,
@@ -185,6 +383,26 @@ class MockSlurmBackend:
         if not self._config.allow_job_actions:
             raise JobActionsDisabledError(self._config.id)
 
+    def _require_file_browsing(self) -> None:
+        if not self._config.allow_file_browsing:
+            raise FileBrowsingDisabledError(self._config.id)
+
+    @staticmethod
+    def _mock_entry(
+        path: str,
+        kind: RemoteFileKind,
+        size_bytes: int = 0,
+    ) -> RemoteFileEntry:
+        return RemoteFileEntry(
+            name=PurePosixPath(path).name,
+            path=path,
+            kind=kind,
+            size_bytes=size_bytes,
+            modified_at=_MOCK_NOW,
+            permissions="drwxr-xr-x" if kind is RemoteFileKind.DIRECTORY else "-rw-r--r--",
+            readable=True,
+        )
+
     @staticmethod
     def _build_partitions() -> list[Partition]:
         return [
@@ -197,6 +415,14 @@ class MockSlurmBackend:
                 allocated_node_count=1,
                 idle_node_count=1,
                 other_node_count=1,
+                is_default=True,
+                node_names=["cpu001", "cpu002", "cpu003"],
+                qos=["normal"],
+                minimum_nodes=1,
+                maximum_nodes=16,
+                maximum_cpus_per_node=64,
+                default_memory_mb_per_cpu=4_096,
+                maximum_time_minutes=2_880,
             ),
             Partition(
                 name="gpu",
@@ -207,6 +433,13 @@ class MockSlurmBackend:
                 allocated_node_count=1,
                 idle_node_count=0,
                 other_node_count=0,
+                node_names=["gpu001"],
+                qos=["gpu"],
+                minimum_nodes=1,
+                maximum_nodes=4,
+                maximum_cpus_per_node=64,
+                default_memory_mb_per_node=524_288,
+                maximum_time_minutes=1_440,
             ),
         ]
 
@@ -222,6 +455,13 @@ class MockSlurmBackend:
                 allocated_cpus=0,
                 memory_mb=262_144,
                 allocated_memory_mb=0,
+                free_memory_mb=250_000,
+                cpu_load=0.42,
+                sockets=2,
+                cores_per_socket=16,
+                threads_per_core=2,
+                configured_features=["zen4", "local-ssd"],
+                active_features=["zen4", "local-ssd"],
             ),
             Node(
                 name="cpu002",
@@ -232,6 +472,13 @@ class MockSlurmBackend:
                 allocated_cpus=48,
                 memory_mb=262_144,
                 allocated_memory_mb=196_608,
+                free_memory_mb=58_000,
+                cpu_load=47.8,
+                sockets=2,
+                cores_per_socket=16,
+                threads_per_core=2,
+                configured_features=["zen4"],
+                active_features=["zen4"],
             ),
             Node(
                 name="cpu003",
@@ -242,6 +489,11 @@ class MockSlurmBackend:
                 allocated_cpus=0,
                 memory_mb=262_144,
                 allocated_memory_mb=0,
+                free_memory_mb=248_000,
+                cpu_load=0.0,
+                sockets=2,
+                cores_per_socket=16,
+                threads_per_core=2,
                 reason="Scheduled hardware maintenance",
             ),
             Node(
@@ -255,6 +507,14 @@ class MockSlurmBackend:
                 allocated_memory_mb=262_144,
                 generic_resources=["gpu:a100:4"],
                 gpu_resources=["A100 80GB x4"],
+                allocated_generic_resources=["gpu:a100:2"],
+                free_memory_mb=238_000,
+                cpu_load=31.6,
+                sockets=2,
+                cores_per_socket=16,
+                threads_per_core=2,
+                configured_features=["a100", "nvlink"],
+                active_features=["a100", "nvlink"],
             ),
         ]
 
@@ -406,5 +666,11 @@ class MockSlurmBackend:
                     if completed
                     else None
                 ),
+            )
+        # Exercise the merged stdout/stderr path in the local demo.
+        merged = details.get("12002")
+        if merged is not None:
+            details["12002"] = merged.model_copy(
+                update={"standard_error_path": merged.standard_output_path}
             )
         return details

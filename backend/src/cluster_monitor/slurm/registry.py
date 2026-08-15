@@ -63,5 +63,6 @@ class BackendRegistry:
                 backend=config.backend,
                 connection_status=ConnectionStatus.UNAVAILABLE,
                 job_actions_enabled=config.allow_job_actions,
+                file_browser_enabled=config.allow_file_browsing,
                 last_error="Cluster metadata could not be loaded.",
             )

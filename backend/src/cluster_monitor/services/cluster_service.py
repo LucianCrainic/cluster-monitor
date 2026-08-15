@@ -7,15 +7,21 @@ from cluster_monitor.models import (
     ClientSettings,
     Cluster,
     ClusterOverview,
+    ClusterTopology,
     Job,
     JobCancellationReceipt,
     JobDetails,
+    JobLogSession,
     JobState,
     JobSubmissionReceipt,
     JobSubmissionRequest,
     Node,
     NodeState,
     Partition,
+    RemoteDirectory,
+    RemoteDirectoryRequest,
+    RemoteFilePreview,
+    RemoteFilePreviewRequest,
 )
 from cluster_monitor.slurm import BackendRegistry
 
@@ -53,6 +59,23 @@ class ClusterService:
             nodes = [node for node in nodes if partition in node.partition_names]
         return nodes
 
+    async def get_topology(self, cluster_id: str) -> ClusterTopology:
+        return await self._registry.get(cluster_id).get_topology()
+
+    async def list_remote_directory(
+        self,
+        cluster_id: str,
+        request: RemoteDirectoryRequest,
+    ) -> RemoteDirectory:
+        return await self._registry.get(cluster_id).list_remote_directory(request)
+
+    async def preview_remote_file(
+        self,
+        cluster_id: str,
+        request: RemoteFilePreviewRequest,
+    ) -> RemoteFilePreview:
+        return await self._registry.get(cluster_id).preview_remote_file(request)
+
     async def get_jobs(
         self,
         cluster_id: str,
@@ -67,6 +90,9 @@ class ClusterService:
 
     async def get_job(self, cluster_id: str, job_id: str) -> JobDetails:
         return await self._registry.get(cluster_id).get_job(job_id)
+
+    async def open_job_log_stream(self, cluster_id: str, job_id: str) -> JobLogSession:
+        return await self._registry.get(cluster_id).open_job_log_stream(job_id)
 
     async def get_recent_jobs(
         self,

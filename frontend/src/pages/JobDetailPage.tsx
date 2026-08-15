@@ -5,6 +5,7 @@ import { useCancelJobMutation, useJobQuery } from "../api/queries";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { RefreshButton } from "../components/RefreshButton";
 import { JobStateBadge } from "../components/StatusBadge";
+import { JobLogViewer } from "../components/JobLogViewer";
 import { useCluster } from "../context/useCluster";
 import {
   displayValue,
@@ -20,6 +21,7 @@ export function JobDetailPage() {
   const jobQuery = useJobQuery(selectedClusterId, jobId);
   const cancelMutation = useCancelJobMutation(selectedClusterId, jobId);
   const [confirmingCancellation, setConfirmingCancellation] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "logs">("overview");
 
   if (jobQuery.isLoading) {
     return (
@@ -47,7 +49,7 @@ export function JobDetailPage() {
   }
 
   const job = jobQuery.data;
-  if (!job) {
+  if (!job || !selectedClusterId) {
     return null;
   }
   const isActive =
@@ -81,6 +83,12 @@ export function JobDetailPage() {
           </p>
         </div>
         <div className="page-header__actions">
+          <Link
+            className="button button--secondary"
+            to={`/topology?job=${encodeURIComponent(job.job_id)}`}
+          >
+            View allocation topology
+          </Link>
           {canCancel && !cancelMutation.data ? (
             <button
               className="button button--danger"
@@ -169,7 +177,54 @@ export function JobDetailPage() {
         </section>
       ) : null}
 
-      <div className="detail-layout">
+      <div
+        className="job-detail-tabs"
+        role="tablist"
+        aria-label="Job details"
+        onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+            return;
+          }
+          event.preventDefault();
+          const nextTab =
+            event.key === "ArrowRight" || event.key === "End" ? "logs" : "overview";
+          setActiveTab(nextTab);
+          requestAnimationFrame(() => {
+            document.getElementById(`job-${nextTab}-tab`)?.focus();
+          });
+        }}
+      >
+        <button
+          id="job-overview-tab"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "overview"}
+          aria-controls="job-overview-panel"
+          tabIndex={activeTab === "overview" ? 0 : -1}
+          onClick={() => setActiveTab("overview")}
+        >
+          Overview
+        </button>
+        <button
+          id="job-logs-tab"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "logs"}
+          aria-controls="job-logs-panel"
+          tabIndex={activeTab === "logs" ? 0 : -1}
+          onClick={() => setActiveTab("logs")}
+        >
+          Logs
+        </button>
+      </div>
+
+      {activeTab === "overview" ? (
+      <div
+        className="detail-layout"
+        id="job-overview-panel"
+        role="tabpanel"
+        aria-labelledby="job-overview-tab"
+      >
         <section className="detail-card" aria-labelledby="job-summary-heading">
           <div className="detail-card__header">
             <p className="section-eyebrow">Scheduler</p>
@@ -234,6 +289,11 @@ export function JobDetailPage() {
           details={job.accounting}
         />
       </div>
+      ) : (
+        <div id="job-logs-panel" role="tabpanel" aria-labelledby="job-logs-tab">
+          <JobLogViewer clusterId={selectedClusterId} jobId={job.job_id} />
+        </div>
+      )}
     </div>
   );
 }

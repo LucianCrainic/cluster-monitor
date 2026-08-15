@@ -48,6 +48,17 @@ export function useOverviewQuery(clusterId: string | null) {
   });
 }
 
+export function useTopologyQuery(clusterId: string | null) {
+  const refresh = useRefreshSettings();
+
+  return useQuery({
+    queryKey: queryKeys.topology(clusterId ?? ""),
+    queryFn: ({ signal }) => api.getTopology(clusterId ?? "", signal),
+    enabled: Boolean(clusterId),
+    refetchInterval: refresh.nodes_seconds * 1000,
+  });
+}
+
 export function useJobsQuery(clusterId: string | null) {
   const refresh = useRefreshSettings();
 
@@ -56,6 +67,17 @@ export function useJobsQuery(clusterId: string | null) {
     queryFn: ({ signal }) => api.getJobs(clusterId ?? "", signal),
     enabled: Boolean(clusterId),
     refetchInterval: refresh.jobs_seconds * 1000,
+  });
+}
+
+export function useHistoryQuery(clusterId: string | null) {
+  const refresh = useRefreshSettings();
+
+  return useQuery({
+    queryKey: queryKeys.history(clusterId ?? ""),
+    queryFn: ({ signal }) => api.getHistory(clusterId ?? "", signal),
+    enabled: Boolean(clusterId),
+    refetchInterval: refresh.history_seconds * 1000,
   });
 }
 
@@ -88,6 +110,7 @@ export function useSubmitJobMutation(clusterId: string | null) {
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.jobs(clusterId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.history(clusterId) }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.overview(clusterId),
         }),
@@ -117,6 +140,7 @@ export function useCancelJobMutation(
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.jobs(clusterId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.history(clusterId) }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.job(clusterId, jobId),
         }),
