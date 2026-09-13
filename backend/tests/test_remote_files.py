@@ -104,6 +104,25 @@ def test_preview_helper_distinguishes_text_binary_and_oversized(tmp_path: Path) 
     assert large_preview.content is None
 
 
+def test_preview_language_detection_supports_names_extensions_and_shebangs(
+    tmp_path: Path,
+) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text("FROM python:3.14\n", encoding="utf-8")
+    sql_file = tmp_path / "query.sql"
+    sql_file.write_text("SELECT * FROM jobs;\n", encoding="utf-8")
+    executable = tmp_path / "cluster-report"
+    executable.write_text("#!/usr/bin/env python3\nprint('ready')\n", encoding="utf-8")
+
+    assert parse_remote_file_preview(_run_helper("preview", dockerfile), "test").language == (
+        "dockerfile"
+    )
+    assert parse_remote_file_preview(_run_helper("preview", sql_file), "test").language == "sql"
+    assert parse_remote_file_preview(_run_helper("preview", executable), "test").language == (
+        "python"
+    )
+
+
 def test_preview_helper_never_reads_directories_or_fifos(tmp_path: Path) -> None:
     directory_preview = parse_remote_file_preview(_run_helper("preview", tmp_path), "test")
     fifo = tmp_path / "events.fifo"

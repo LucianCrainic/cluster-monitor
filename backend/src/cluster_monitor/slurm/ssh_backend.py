@@ -83,6 +83,7 @@ from cluster_monitor.slurm.commands import (
     build_partitions_text_command,
     build_remote_files_command,
     build_remote_user_command,
+    build_sacct_job_logs_legacy_text_command,
     build_sacct_job_logs_text_command,
     build_sacct_json_command,
     build_sacct_text_command,
@@ -102,6 +103,7 @@ from cluster_monitor.slurm.job_logs import (
     JobLogMetadataParseError,
     metadata_from_job_details,
     overlay_metadata,
+    parse_sacct_job_logs_legacy_text,
     parse_sacct_job_logs_text,
     parse_scontrol_job_logs_json,
     parse_scontrol_job_logs_text,
@@ -139,7 +141,9 @@ logger = get_logger("slurm.ssh_backend")
 
 _REMOTE_USER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,127}$")
 _CACHE_SECONDS = 2.0
-_LOG_INITIAL_LINES = 200
+# Read existing logs from line one before following new output. The browser keeps
+# its own bounded buffer and tells the user if that local safety limit is reached.
+_LOG_INITIAL_LINES: int | None = None
 _LOG_STATUS_POLL_SECONDS = 5.0
 _LOG_FINAL_DRAIN_SECONDS = 1.0
 _LOG_MAX_POLL_FAILURES = 3
@@ -644,6 +648,14 @@ class SshSlurmBackend:
                     await self._execute(build_sacct_job_logs_text_command(remote_user, job_id)),
                     job_id,
                 )
+        if expanded is None and primary is None:
+            with suppress(RemoteCommandError, JobLogMetadataParseError):
+                expanded = parse_sacct_job_logs_legacy_text(
+                    await self._execute(
+                        build_sacct_job_logs_legacy_text_command(remote_user, job_id)
+                    ),
+                    job_id,
+                )
 
         if primary is not None and expanded is not None:
             return overlay_metadata(primary, expanded)
@@ -754,7 +766,8 @@ class SshSlurmBackend:
                 )
                 return
 
-        yield self._metadata_event(current, paths)
+        if waiting_sent:
+            yield self._metadata_event(current, paths)
         yield JobLogStatusEvent(status="live", message="Following live job output.")
         async for event in self._follow_log_paths(paths, current, remote_user, sequence):
             yield event

@@ -255,7 +255,7 @@ class MockSlurmBackend:
                 job_id=job_id,
                 state=details.state,
                 sources=sources,
-                initial_lines=200,
+                initial_lines=None,
             )
             if details.state is JobState.PENDING:
                 yield JobLogStatusEvent(

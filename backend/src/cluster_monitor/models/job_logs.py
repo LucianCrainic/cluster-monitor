@@ -19,7 +19,8 @@ class JobLogMetadataEvent(ApiModel):
     job_id: str
     state: JobState
     sources: list[JobLogSource]
-    initial_lines: int
+    # None means that the stream starts at line one instead of returning a tail.
+    initial_lines: int | None
 
 
 class JobLogStatusEvent(ApiModel):

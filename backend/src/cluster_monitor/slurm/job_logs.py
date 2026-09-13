@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import posixpath
 import re
+import shlex
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 from typing import Any, cast
@@ -165,6 +166,88 @@ def parse_sacct_job_logs_text(output: str, requested_job_id: str) -> JobLogMetad
             patterns_expanded=True,
         )
     return None
+
+
+def parse_sacct_job_logs_legacy_text(
+    output: str,
+    requested_job_id: str,
+) -> JobLogMetadata | None:
+    """Parse portable accounting metadata, including paths from ``SubmitLine``.
+
+    Legacy accounting cannot report path fields directly. We recover explicit
+    output options without executing the recorded command and still verify the
+    resolved files before opening them.
+    """
+
+    for line in output.splitlines():
+        values = line.rstrip("|").split("|", maxsplit=6)
+        if len(values) < 6:
+            continue
+        raw_id, display_id, user, state, workdir, name = values[:6]
+        if requested_job_id not in {raw_id, display_id}:
+            continue
+        requested = _LOG_JOB_ID.fullmatch(requested_job_id)
+        array_job_id = requested.group("job") if requested and requested.group("task") else None
+        array_task_id = requested.group("task") if requested else None
+        default_path = "slurm-%A_%a.out" if array_task_id is not None else "slurm-%j.out"
+        submit_stdout, submit_stderr = _log_paths_from_submit_line(
+            values[6] if len(values) > 6 else None
+        )
+        stdout_path = submit_stdout or default_path
+        stderr_path = submit_stderr or stdout_path
+        return JobLogMetadata(
+            job_id=requested_job_id,
+            user=user,
+            state=normalize_job_state(state),
+            state_raw=state,
+            job_name=name,
+            working_directory=_optional(workdir),
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            array_job_id=array_job_id,
+            array_task_id=array_task_id,
+            patterns_expanded=False,
+        )
+    return None
+
+
+def _log_paths_from_submit_line(value: str | None) -> tuple[str | None, str | None]:
+    submit_line = _optional(value)
+    if submit_line is None:
+        return None, None
+    try:
+        arguments = shlex.split(submit_line, posix=True)
+    except ValueError:
+        return None, None
+
+    stdout: str | None = None
+    stderr: str | None = None
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        target: str | None = None
+        path: str | None = None
+        if argument in {"--output", "-o", "--error", "-e"}:
+            target = "stdout" if argument in {"--output", "-o"} else "stderr"
+            if index + 1 < len(arguments):
+                index += 1
+                path = arguments[index]
+        elif argument.startswith("--output="):
+            target, path = "stdout", argument.partition("=")[2]
+        elif argument.startswith("--error="):
+            target, path = "stderr", argument.partition("=")[2]
+        elif argument.startswith("-o") and len(argument) > 2:
+            target, path = "stdout", argument[2:]
+        elif argument.startswith("-e") and len(argument) > 2:
+            target, path = "stderr", argument[2:]
+
+        normalized = _optional(path)
+        if target == "stdout" and normalized is not None:
+            stdout = normalized
+        elif target == "stderr" and normalized is not None:
+            stderr = normalized
+        index += 1
+    return stdout, stderr
 
 
 def resolve_log_paths(metadata: JobLogMetadata) -> dict[str, str]:

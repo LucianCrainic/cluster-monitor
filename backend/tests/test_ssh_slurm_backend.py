@@ -264,13 +264,52 @@ def test_completed_job_logs_are_authorized_resolved_and_streamed() -> None:
     metadata = events[0]
     assert isinstance(metadata, JobLogMetadataEvent)
     assert metadata.sources == ["stdout", "stderr"]
+    assert metadata.initial_lines is None
     assert [call[0] for call in executor.stream_calls] == ["tail", "tail"]
     assert executor.stream_calls[0][1] == (
-        "--lines=200",
+        "--lines=+1",
         "--",
         "/home/researcher/logs/a b;$(touch nope).out",
     )
     assert all("/home/researcher" not in str(event) for event in events)
+
+
+def test_completed_job_logs_fall_back_to_slurm_default_on_legacy_accounting() -> None:
+    executor = _json_executor()
+    unsupported = RemoteCommandError(
+        "unsupported option",
+        host_alias="test-hpc",
+        remote_executable="sacct",
+        exit_code=1,
+    )
+    executor.responses.update(
+        {
+            "scontrol_job_logs_json": unsupported,
+            "scontrol_job_logs_text": unsupported,
+            "sacct_job_logs_json": unsupported,
+            "sacct_job_logs_text": unsupported,
+            "sacct_job_logs_legacy_text": _result(
+                "11998|11998|researcher|COMPLETED|/home/researcher/work|preprocess|"
+                "sbatch --output='/logs/%x-%j.out' --error='/logs/%x-%j.err' job.sbatch\n"
+            ),
+            "job_log_file_exists": _result(""),
+            "job_log_file_regular": _result(""),
+            "job_log_file_readable": _result(""),
+        }
+    )
+    backend = SshSlurmBackend(_config(), executor=executor)
+
+    async def exercise() -> list[JobLogEvent]:
+        session = await backend.open_job_log_stream("11998")
+        return [event async for event in session.events]
+
+    events = asyncio.run(exercise())
+
+    assert isinstance(events[0], JobLogMetadataEvent)
+    assert [call[1][-1] for call in executor.stream_calls] == [
+        "/logs/preprocess-11998.out",
+        "/logs/preprocess-11998.err",
+    ]
 
 
 def test_job_logs_require_the_actual_remote_ssh_owner() -> None:

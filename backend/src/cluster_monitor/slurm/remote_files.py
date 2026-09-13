@@ -67,7 +67,10 @@ def parse_remote_file_preview(output: str, cluster_id: str) -> RemoteFilePreview
             raise RemoteFileResponseError("The remote file response is invalid.") from None
         payload["content"] = content
     payload["cluster_id"] = cluster_id
-    payload["language"] = _language_for_path(str(payload.get("path", "")))
+    payload["language"] = _language_for_path(
+        str(payload.get("path", "")),
+        payload.get("content") if isinstance(payload.get("content"), str) else None,
+    )
     try:
         return RemoteFilePreview.model_validate(payload)
     except ValidationError:
@@ -96,31 +99,61 @@ def _payload(output: str, cluster_id: str) -> dict[str, Any]:
     return payload
 
 
-def _language_for_path(path: str) -> str:
-    suffix = PurePosixPath(path).suffix.casefold()
-    return {
+def _language_for_path(path: str, content: str | None = None) -> str:
+    parsed = PurePosixPath(path)
+    name = parsed.name.casefold()
+    if name in {"dockerfile", "containerfile"}:
+        return "dockerfile"
+
+    suffix = parsed.suffix.casefold()
+    language = {
         ".bash": "shell",
+        ".cjs": "javascript",
         ".c": "c",
         ".cc": "cpp",
+        ".cfg": "properties",
+        ".conf": "properties",
         ".cpp": "cpp",
         ".css": "css",
+        ".diff": "diff",
+        ".dockerfile": "dockerfile",
+        ".env": "shell",
         ".err": "text",
         ".h": "c",
         ".hpp": "cpp",
         ".html": "html",
         ".ini": "properties",
+        ".ipynb": "json",
         ".js": "javascript",
+        ".jsx": "javascript",
         ".json": "json",
         ".log": "text",
         ".md": "markdown",
+        ".mjs": "javascript",
+        ".mts": "typescript",
         ".out": "text",
+        ".patch": "diff",
         ".py": "python",
+        ".properties": "properties",
+        ".sbatch": "shell",
         ".sh": "shell",
+        ".sql": "sql",
         ".slurm": "shell",
         ".toml": "toml",
         ".ts": "typescript",
         ".tsx": "typescript",
         ".txt": "text",
+        ".xml": "xml",
         ".yaml": "yaml",
         ".yml": "yaml",
-    }.get(suffix, "text")
+    }.get(suffix)
+    if language is not None:
+        return language
+
+    first_line = content.partition("\n")[0].casefold() if content else ""
+    if first_line.startswith("#!"):
+        if "python" in first_line:
+            return "python"
+        if any(shell_name in first_line for shell_name in ("bash", "zsh", "ksh", "/sh")):
+            return "shell"
+    return "text"

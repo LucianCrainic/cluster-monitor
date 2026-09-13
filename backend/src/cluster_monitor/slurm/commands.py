@@ -347,6 +347,29 @@ def build_sacct_job_logs_text_command(user: str, job_id: str) -> SlurmCommand:
     )
 
 
+def build_sacct_job_logs_legacy_text_command(user: str, job_id: str) -> SlurmCommand:
+    """Read portable accounting metadata when path fields are unavailable.
+
+    Some Slurm 23.11 installations do not expose ``StdOut``/``StdErr`` through
+    ``sacct`` and reject ``--expand-patterns``. ``SubmitLine`` preserves explicit
+    ``sbatch --output`` and ``--error`` options on those versions; otherwise the
+    log layer falls back to Slurm's deterministic default output filename.
+    """
+
+    return SlurmCommand(
+        "sacct",
+        (
+            "--allocations",
+            "--parsable2",
+            "--noheader",
+            f"--user={_validated_user(user)}",
+            f"--jobs={_validated_log_job_id(job_id)}",
+            "--format=JobIDRaw,JobID,User,State,WorkDir,JobName,SubmitLine",
+        ),
+        "sacct_job_logs_legacy_text",
+    )
+
+
 def build_scontrol_job_json_command(job_id: str) -> SlurmCommand:
     return SlurmCommand(
         "scontrol",
@@ -372,12 +395,12 @@ def build_file_test_command(path: str, predicate: str) -> SlurmCommand:
     return SlurmCommand("test", (option, path), f"job_log_file_{predicate}")
 
 
-def build_tail_command(path: str, *, initial_lines: int, follow: bool) -> SlurmCommand:
+def build_tail_command(path: str, *, initial_lines: int | None, follow: bool) -> SlurmCommand:
     if not path or "\x00" in path:
         raise ValueError("path must be non-empty and contain no NUL bytes")
-    if initial_lines < 0 or initial_lines > 10_000:
+    if initial_lines is not None and (initial_lines < 0 or initial_lines > 10_000):
         raise ValueError("initial_lines must be between zero and 10000")
-    arguments = [f"--lines={initial_lines}"]
+    arguments = ["--lines=+1" if initial_lines is None else f"--lines={initial_lines}"]
     if follow:
         arguments.extend(("--follow=name", "--retry"))
     arguments.extend(("--", path))

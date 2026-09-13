@@ -9,6 +9,7 @@ from cluster_monitor.models import JobState
 from cluster_monitor.slurm.job_logs import (
     JobLogMetadata,
     JobLogMetadataParseError,
+    parse_sacct_job_logs_legacy_text,
     parse_sacct_job_logs_text,
     parse_scontrol_job_logs_json,
     parse_scontrol_job_logs_text,
@@ -140,6 +141,34 @@ def test_sacct_zero_scope_ids_are_absent_for_plain_jobs() -> None:
     assert metadata.array_task_id is None
     assert metadata.heterogeneous_job_id is None
     assert metadata.heterogeneous_job_offset is None
+
+
+def test_legacy_sacct_metadata_resolves_default_output_for_slurm_23_11() -> None:
+    output = "5026775|5026775|researcher|COMPLETED|/work/project|legacy-job\n"
+
+    metadata = parse_sacct_job_logs_legacy_text(output, "5026775")
+
+    assert metadata is not None
+    assert metadata.user == "researcher"
+    assert metadata.terminal is True
+    assert resolve_log_paths(metadata) == {
+        "combined": "/work/project/slurm-5026775.out"
+    }
+
+
+def test_legacy_sacct_metadata_recovers_custom_paths_from_submit_line() -> None:
+    output = (
+        "5027042|5027042|researcher|COMPLETED|/work/project|benchmark|"
+        "sbatch --output='/logs/%x-%j.out' --error /logs/%x-%j.err job.sbatch\n"
+    )
+
+    metadata = parse_sacct_job_logs_legacy_text(output, "5027042")
+
+    assert metadata is not None
+    assert resolve_log_paths(metadata) == {
+        "stdout": "/logs/benchmark-5027042.out",
+        "stderr": "/logs/benchmark-5027042.err",
+    }
 
 
 def test_rejects_unsafe_ids_and_unresolved_or_invalid_paths() -> None:

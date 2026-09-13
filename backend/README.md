@@ -35,9 +35,11 @@ allocation or explicit numeric array-task ID. The SSH backend checks the job
 owner against `id -un`, obtains output paths from `scontrol` and expanded
 `sacct` metadata, and passes each normalized path as one quoted `tail` argument.
 It never accepts a path from the client. Pending jobs wait for Slurm to create
-their files, terminal jobs return a 200-line snapshot, and live jobs use
-`tail --follow=name --retry` until completion or browser disconnect. Log data
-and resolved paths are not written to application logs.
+their files, terminal jobs stream their complete available output, and live jobs
+read each logfile from line one before using `tail --follow=name --retry` until
+completion or browser disconnect. The browser applies a visible local safety
+limit to very large output. Log data and resolved paths are not written to
+application logs.
 
 `GET /api/clusters/{cluster_id}/topology` combines rich `scontrol --json`
 partition/node data with live `sinfo` allocation counts and the optional output
