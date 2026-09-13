@@ -1,9 +1,24 @@
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { installApiMock, jsonResponse, renderApp } from "../test/renderApp";
 
 describe("Overview page", () => {
+  it("persists the icon-only sidebar preference", async () => {
+    window.localStorage.removeItem("cluster-monitor-sidebar-collapsed");
+    installApiMock();
+    const { container } = renderApp("/");
+    const user = userEvent.setup();
+
+    await screen.findByRole("heading", { name: "Overview" });
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+
+    expect(container.querySelector(".app-shell")).toHaveClass("app-shell--collapsed");
+    expect(window.localStorage.getItem("cluster-monitor-sidebar-collapsed")).toBe("true");
+    window.localStorage.removeItem("cluster-monitor-sidebar-collapsed");
+  });
+
   it("renders mock overview data", async () => {
     installApiMock();
     renderApp("/");

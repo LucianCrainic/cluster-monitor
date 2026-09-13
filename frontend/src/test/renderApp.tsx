@@ -42,7 +42,7 @@ export function sseResponse(frames?: string): Response {
   return new Response(
     frames ??
       [
-        'event: metadata\ndata: {"type":"metadata","job_id":"18432","state":"running","sources":["stdout","stderr"],"initial_lines":200}\n\n',
+        'event: metadata\ndata: {"type":"metadata","job_id":"18432","state":"running","sources":["stdout","stderr"],"initial_lines":null}\n\n',
         'event: status\ndata: {"type":"status","status":"live","message":"Following live job output."}\n\n',
         'event: chunk\ndata: {"type":"chunk","source":"stdout","sequence":1,"text":"training epoch 1\\n"}\n\n',
         'event: chunk\ndata: {"type":"chunk","source":"stderr","sequence":2,"text":"warning: sample\\n"}\n\n',

@@ -9,6 +9,7 @@ import {
 
 import { ApiError, streamJobLogs } from "../api/client";
 import type { JobLogEvent, JobLogSource } from "../types/api";
+import { Icon } from "./Icon";
 
 const MAX_BUFFER_LINES = 5_000;
 const MAX_BUFFER_CHARS = 2 * 1024 * 1024;
@@ -35,10 +36,12 @@ interface ViewerState {
   status: ViewerStatus;
   message: string;
   trimmed: boolean;
+  historyLineLimit: number | null;
 }
 
 type ViewerAction =
   | { type: "reset" }
+  | { type: "clear" }
   | { type: "event"; event: JobLogEvent }
   | { type: "disconnected"; message: string };
 
@@ -49,6 +52,7 @@ const initialState: ViewerState = {
   status: "connecting",
   message: "Connecting to the job output…",
   trimmed: false,
+  historyLineLimit: null,
 };
 
 export function JobLogViewer({
@@ -65,7 +69,11 @@ export function JobLogViewer({
   const [currentMatch, setCurrentMatch] = useState(-1);
   const [wrap, setWrap] = useState(false);
   const [autoscroll, setAutoscroll] = useState(true);
+  const [showLineNumbers, setShowLineNumbers] = useState(true);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [actionMessage, setActionMessage] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const viewerRef = useRef<HTMLElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -106,6 +114,26 @@ export function JobLogViewer({
     return () => controller.abort();
   }, [clusterId, connectionAttempt, jobId]);
 
+  useEffect(() => {
+    if (!isFullscreen) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function exitOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    }
+
+    document.addEventListener("keydown", exitOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", exitOnEscape);
+    };
+  }, [isFullscreen]);
+
   const source: "all" | JobLogSource =
     state.sources.length === 1 && state.sources[0] === "combined"
       ? "combined"
@@ -113,12 +141,16 @@ export function JobLogViewer({
         ? selectedSource
         : "all";
 
+  const visibleLines = useMemo(
+    () => pausedAt == null ? state.lines : state.lines.slice(0, pausedAt),
+    [pausedAt, state.lines],
+  );
   const filteredLines = useMemo(
     () =>
       source === "all"
-        ? state.lines
-        : state.lines.filter((line) => line.source === source),
-    [source, state.lines],
+        ? visibleLines
+        : visibleLines.filter((line) => line.source === source),
+    [source, visibleLines],
   );
   const normalizedQuery = query.toLocaleLowerCase();
   const matchingLines = useMemo(
@@ -135,14 +167,14 @@ export function JobLogViewer({
     matchingLines.length === 0 ? -1 : Math.min(currentMatch, matchingLines.length - 1);
 
   useEffect(() => {
-    if (!autoscroll) {
+    if (!autoscroll || pausedAt != null) {
       return;
     }
     const surface = surfaceRef.current;
     if (surface) {
       surface.scrollTop = surface.scrollHeight;
     }
-  }, [autoscroll, state.lines]);
+  }, [autoscroll, pausedAt, state.lines]);
 
   const snapshot = useMemo(
     () =>
@@ -193,9 +225,14 @@ export function JobLogViewer({
 
   const currentMatchId = matchingLines[visibleMatch]?.id;
   const showSourceLabels = source === "all" && state.sources.length > 1;
+  const newLineCount = pausedAt == null ? 0 : Math.max(0, state.lines.length - pausedAt);
 
   return (
-    <section className="job-logs" aria-labelledby="job-logs-heading">
+    <section
+      className={`job-logs${isFullscreen ? " job-logs--fullscreen" : ""}`}
+      aria-labelledby="job-logs-heading"
+      ref={viewerRef}
+    >
       <div className="job-logs__header">
         <div>
           <p className="section-eyebrow">Remote output</p>
@@ -203,10 +240,27 @@ export function JobLogViewer({
           <p className="job-logs__status-message" aria-live="polite">
             {state.message}
           </p>
+          <p className="job-logs__session">
+            {state.lines.length.toLocaleString()} lines buffered
+            {state.sources.length ? ` · ${state.sources.map(sourceLabel).join(" + ")}` : ""}
+          </p>
         </div>
-        <div className={`log-status log-status--${state.status}`}>
-          <span aria-hidden="true" />
-          {statusLabel(state.status)}
+        <div className="job-logs__header-actions">
+          <div className={`log-status log-status--${state.status}`}>
+            <span aria-hidden="true" />
+            {statusLabel(state.status)}
+          </div>
+          <button
+            className="button button--secondary button--compact job-logs__fullscreen-toggle"
+            type="button"
+            aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            aria-pressed={isFullscreen}
+            title={isFullscreen ? "Exit full screen (Esc)" : "View logs full screen"}
+            onClick={() => setIsFullscreen((value) => !value)}
+          >
+            <Icon name={isFullscreen ? "minimize" : "maximize"} />
+            {isFullscreen ? "Exit full screen" : "Full screen"}
+          </button>
         </div>
       </div>
 
@@ -229,12 +283,14 @@ export function JobLogViewer({
               className={source === candidate ? "is-active" : undefined}
               key={candidate}
               type="button"
+              aria-label={sourceLabel(candidate)}
               onClick={() => {
                 setSelectedSource(candidate);
                 setCurrentMatch(0);
               }}
             >
               {sourceLabel(candidate)}
+              <span aria-hidden="true">{state.lines.filter((line) => line.source === candidate).length}</span>
             </button>
           ))}
         </div>
@@ -278,6 +334,22 @@ export function JobLogViewer({
         <button
           className="button button--secondary button--compact"
           type="button"
+          onClick={() => {
+            if (pausedAt == null) {
+              setPausedAt(state.lines.length);
+              setAutoscroll(false);
+            } else {
+              setPausedAt(null);
+              setAutoscroll(true);
+            }
+          }}
+        >
+          <Icon name={pausedAt == null ? "pause" : "play"} />
+          {pausedAt == null ? "Pause output" : `Resume${newLineCount ? ` · ${newLineCount} new` : ""}`}
+        </button>
+        <button
+          className="button button--secondary button--compact"
+          type="button"
           onClick={() => setWrap((value) => !value)}
         >
           {wrap ? "No wrap" : "Wrap lines"}
@@ -301,8 +373,21 @@ export function JobLogViewer({
         <button
           className="button button--secondary button--compact"
           type="button"
+          disabled={state.lines.length === 0}
+          onClick={() => {
+            dispatch({ type: "clear" });
+            setPausedAt(null);
+            setActionMessage("Cleared the local log buffer.");
+          }}
+        >
+          Clear
+        </button>
+        <button
+          className="button button--secondary button--compact"
+          type="button"
           onClick={() => {
             setAutoscroll(true);
+            setPausedAt(null);
             setActionMessage("");
             setConnectionAttempt((value) => value + 1);
           }}
@@ -310,6 +395,13 @@ export function JobLogViewer({
           Reconnect
         </button>
       </div>
+
+      {state.historyLineLimit !== null ? (
+        <p className="job-logs__notice" role="status">
+          Showing the latest {state.historyLineLimit.toLocaleString()} lines per logfile;
+          earlier remote output may be omitted.
+        </p>
+      ) : null}
 
       {state.trimmed ? (
         <p className="job-logs__notice" role="status">
@@ -333,7 +425,7 @@ export function JobLogViewer({
         {filteredLines.length === 0 ? (
           <div className="log-terminal__empty">{emptyMessage(state.status)}</div>
         ) : (
-          filteredLines.map((line) => (
+          filteredLines.map((line, index) => (
             <div
               className={`log-line${line.id === currentMatchId ? " log-line--current" : ""}`}
               key={line.id}
@@ -345,6 +437,7 @@ export function JobLogViewer({
                 }
               }}
             >
+              {showLineNumbers ? <span className="log-line__number">{index + 1}</span> : null}
               {showSourceLabels ? (
                 <span className={`log-line__source log-line__source--${line.source}`}>
                   {sourceLabel(line.source)}
@@ -367,6 +460,14 @@ export function JobLogViewer({
           />
           Follow latest output
         </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={showLineNumbers}
+            onChange={(event) => setShowLineNumbers(event.target.checked)}
+          />
+          Line numbers
+        </label>
         {!autoscroll ? (
           <button
             className="button button--secondary button--compact"
@@ -376,7 +477,11 @@ export function JobLogViewer({
             Jump to latest
           </button>
         ) : null}
-        <span>{filteredLines.length.toLocaleString()} buffered lines</span>
+        <span>
+          {pausedAt == null
+            ? `${filteredLines.length.toLocaleString()} buffered lines`
+            : `Paused · ${newLineCount.toLocaleString()} new lines buffered`}
+        </span>
         {actionMessage ? <span aria-live="polite">{actionMessage}</span> : null}
       </div>
     </section>
@@ -387,6 +492,9 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
   if (action.type === "reset") {
     return initialState;
   }
+  if (action.type === "clear") {
+    return { ...state, lines: [], openLines: {}, trimmed: false };
+  }
   if (action.type === "disconnected") {
     return { ...state, status: "disconnected", message: action.message };
   }
@@ -395,7 +503,11 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
     return {
       ...state,
       sources: event.sources,
-      message: `Showing the latest ${event.initial_lines} lines per logfile.`,
+      historyLineLimit: event.initial_lines,
+      message:
+        event.initial_lines === null
+          ? "Loading complete available history."
+          : `Loading the latest ${event.initial_lines} lines per logfile.`,
     };
   }
   if (event.type === "status") {

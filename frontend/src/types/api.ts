@@ -32,7 +32,7 @@ export type JobLogEvent =
       job_id: string;
       state: JobState;
       sources: JobLogSource[];
-      initial_lines: number;
+      initial_lines: number | null;
     }
   | {
       type: "status";

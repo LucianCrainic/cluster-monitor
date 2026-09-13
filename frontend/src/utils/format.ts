@@ -94,6 +94,12 @@ export function formatMemory(megabytes: number | null | undefined): string {
   if (megabytes === null || megabytes === undefined) {
     return "—";
   }
+  if (megabytes >= 1024 * 1024) {
+    const tebibytes = megabytes / (1024 * 1024);
+    return `${tebibytes.toLocaleString(undefined, {
+      maximumFractionDigits: tebibytes < 10 ? 1 : 0,
+    })} TiB`;
+  }
   if (megabytes >= 1024) {
     const gibibytes = megabytes / 1024;
     return `${gibibytes.toLocaleString(undefined, {

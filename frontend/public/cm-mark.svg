@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cluster Monitor">
+  <defs>
+    <linearGradient id="a" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74e2c2"/>
+      <stop offset="1" stop-color="#3b9cbb"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="#0d1916"/>
+  <path d="M45 17.5A20 20 0 1 0 46 46" fill="none" stroke="url(#a)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M25 39V26l7 8 7-8v13" fill="none" stroke="#eafff8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="45" cy="17.5" r="4" fill="#eafff8"/>
+  <circle cx="46" cy="46" r="4" fill="#74e2c2"/>
+</svg>

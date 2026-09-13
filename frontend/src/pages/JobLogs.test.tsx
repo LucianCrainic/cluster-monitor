@@ -136,6 +136,25 @@ describe("job log streaming", () => {
     expect(screen.getByRole("button", { name: "Jump to latest" })).toBeVisible();
   });
 
+  it("expands the log viewer to the viewport and exits with Escape", async () => {
+    installApiMock();
+    renderApp("/jobs/18432");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("tab", { name: "Logs" }));
+    const enterButton = await screen.findByRole("button", { name: "Enter full screen" });
+    const viewer = enterButton.closest(".job-logs");
+
+    await user.click(enterButton);
+    expect(viewer).toHaveClass("job-logs--fullscreen");
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(screen.getByRole("button", { name: "Exit full screen" })).toBeVisible();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(viewer).not.toHaveClass("job-logs--fullscreen");
+    expect(document.body.style.overflow).toBe("");
+  });
+
   it("trims the oldest lines when the bounded viewer reaches 5,000 lines", async () => {
     const text = Array.from({ length: 5_002 }, (_, index) => `line ${index}`).join("\n");
     const frames = [
@@ -157,6 +176,7 @@ describe("job log streaming", () => {
     expect(
       await screen.findByText("Earlier output was trimmed to keep the viewer responsive."),
     ).toBeVisible();
+    expect(screen.getByText(/Showing the latest 200 lines per logfile/)).toBeVisible();
     expect(screen.getByText("5,000 buffered lines")).toBeVisible();
     expect(screen.queryByText("line 0")).not.toBeInTheDocument();
     expect(screen.getByText("line 5001")).toBeVisible();

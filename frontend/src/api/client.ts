@@ -245,7 +245,7 @@ function isJobLogEvent(value: unknown): value is JobLogEvent {
       event.sources.every((source) =>
         ["stdout", "stderr", "combined"].includes(String(source)),
       ) &&
-      typeof event.initial_lines === "number"
+      (event.initial_lines === null || typeof event.initial_lines === "number")
     );
   }
   if (event.type === "status") {
