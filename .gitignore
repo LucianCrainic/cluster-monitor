@@ -1,36 +1,29 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.venv/
-backend/.venv/
-backend/dist/
-coverage.xml
-.coverage
-htmlcov/
+# Build output
+/target/
 
-# Node / Vite
-frontend/node_modules/
-frontend/dist/
-frontend/coverage/
-*.tsbuildinfo
-
-# Local configuration and environment overrides
+# Local configuration
 .env
 .env.local
 .env.*.local
-config/clusters.local.yaml
 config/*.local.yaml
+
+# Build output from older checkouts
+__pycache__/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+/backend/build/
+/backend/dist/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/coverage/
+*.tsbuildinfo
 
 # Editors and operating systems
 .DS_Store
 .idea/
 .vscode/
 *.swp
-
-# Local process output
 *.log
 *.pid

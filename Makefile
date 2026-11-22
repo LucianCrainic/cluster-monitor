@@ -1,58 +1,39 @@
-SHELL := /bin/bash
+CARGO ?= cargo
+BINDIR ?= $(HOME)/.local/bin
+TARGET_DIR ?= target
+export CARGO_TARGET_DIR := $(TARGET_DIR)
 
-UV ?= uv
-NPM ?= npm
-
-.PHONY: help install backend frontend dev generate-api test lint typecheck build
+.PHONY: help install run demo test lint typecheck build binary install-bin
 
 help:
-	@echo "cluster-monitor developer commands"
-	@echo "  make install      Install backend and frontend dependencies"
-	@echo "  make backend      Start FastAPI on 127.0.0.1:8000"
-	@echo "  make frontend     Start Vite on 127.0.0.1:5173"
-	@echo "  make dev          Start both development servers"
-	@echo "  make generate-api  Refresh OpenAPI and generated frontend types"
-	@echo "  make test         Run backend and frontend tests"
-	@echo "  make lint         Run Ruff and ESLint"
-	@echo "  make typecheck    Run mypy and TypeScript checks"
-	@echo "  make build        Build the frontend"
+	@echo "make demo         Run the demo from source"
+	@echo "make run          Run with your configured clusters"
+	@echo "make test         Run Rust tests"
+	@echo "make lint         Check formatting and run Clippy"
+	@echo "make build        Compile an optimized native executable"
+	@echo "make install-bin  Install the executable in $(BINDIR)"
 
-install:
-	@command -v "$(UV)" >/dev/null || { echo "error: uv is required (https://docs.astral.sh/uv/)" >&2; exit 127; }
-	@command -v "$(NPM)" >/dev/null || { echo "error: npm is required (install Node.js LTS)" >&2; exit 127; }
-	cd backend && "$(UV)" sync --extra dev
-	@if [[ -f frontend/package-lock.json ]]; then \
-		"$(NPM)" --prefix frontend ci; \
-	else \
-		"$(NPM)" --prefix frontend install; \
-	fi
+install: install-bin
 
-backend:
-	./scripts/backend.sh
+run:
+	$(CARGO) run --locked -- $(ARGS)
 
-frontend:
-	./scripts/frontend.sh
-
-dev:
-	./scripts/dev.sh
-
-generate-api:
-	cd backend && "$(UV)" run --extra dev python scripts/export_openapi.py
-	cd backend && "$(UV)" run --extra dev python scripts/generate_typescript.py \
-		openapi.json ../frontend/src/types/api.generated.ts
+demo:
+	$(CARGO) run --locked -- --demo
 
 test:
-	cd backend && "$(UV)" run --extra dev pytest
-	"$(NPM)" --prefix frontend run test
+	$(CARGO) test --locked
 
 lint:
-	cd backend && "$(UV)" run --extra dev ruff check .
-	cd backend && "$(UV)" run --extra dev ruff format --check .
-	"$(NPM)" --prefix frontend run lint
+	$(CARGO) fmt --check
+	$(CARGO) clippy --locked --all-targets -- -D warnings
 
 typecheck:
-	cd backend && "$(UV)" run --extra dev mypy src tests scripts
-	"$(NPM)" --prefix frontend run typecheck
+	$(CARGO) check --locked --all-targets
 
-build:
-	"$(NPM)" --prefix frontend run build
+build binary:
+	$(CARGO) build --locked --release
+
+install-bin: build
+	install -d "$(BINDIR)"
+	install -m 755 "$(TARGET_DIR)/release/cluster-monitor" "$(BINDIR)/cluster-monitor"
