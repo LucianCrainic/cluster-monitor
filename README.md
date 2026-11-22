@@ -1,105 +1,105 @@
-<div align="center">
+# Slurm Monitor
 
-<!--
-  Banner
-  ------
-  The project banner artwork lives at docs/assets/banner.svg. Swap the link
-  below if a different image or size is preferred.
--->
-<img src="docs/assets/banner.svg" alt="cluster-monitor" width="800" />
+A read-only Slurm dashboard that runs in your terminal. Inspect partition
+capacity, active queues, recent accounting, and node resources over OpenSSH.
 
-# cluster-monitor
+![Slurm Monitor demo showing the rounded queue, summary, and selection panes](docs/assets/slurm-monitor.png)
 
-**Local web app for inspecting Slurm clusters and, when explicitly enabled,
-submitting and cancelling jobs through your existing OpenSSH client.**
+## Try the demo
 
-<p>
+From the repository root, use Rust 1.88 or newer with Cargo.
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Slurm](https://img.shields.io/badge/Slurm-24.11-EE0000?logo=slurm)](https://slurm.schedmd.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-</p>
-
-[Getting started](#getting-started) ·
-[Features](#features) ·
-[Documentation](docs/) ·
-[Contributing](#contributing)
-
-</div>
-
----
-
-`cluster-monitor` is a single-user, loopback-bound web application for
-inspecting university and research Slurm clusters that are reachable after
-joining a VPN. It works end to end with deterministic mock data, so you can
-develop and explore it without a VPN, SSH server, or Slurm installation. Its
-real OpenSSH backend has been exercised against Slurm 24.11.1 using `sinfo`,
-`squeue`, and `sacct`.
-
-## Features
-
-- **Live cluster overview** — nodes, partitions, and job summaries on one page.
-- **Job queue & history** — running, pending, and recently completed jobs.
-- **Streaming job logs** — read-only stdout/stderr streams resolved by the
-  scheduler, never from browser-provided paths.
-- **Topology view** — enriched partition/resource snapshots with optional
-  physical Slurm topology.
-- **Remote file browser** — explicit per-cluster opt-in for read-only directory
-  listing and bounded UTF-8 file preview.
-- **Guarded job actions** — submission and cancellation are disabled by default
-  and always require an explicit confirmation.
-
-## Getting started
-
-### Prerequisites
-
-- Python 3.12 or newer with [`uv`](https://docs.astral.sh/uv/)
-- Node.js 22.22 or newer with npm
-- `make` and Bash (Docker, a database, and a local Slurm install are not
-  required for mock mode)
-
-### Clone and run
-
-```bash
-git clone https://github.com/LucianCrainic/cluster-monitor.git
-cd cluster-monitor
-
-make install   # install backend and frontend dependencies
-make dev       # start FastAPI and Vite together
+```sh
+cargo run --locked -- --demo
 ```
 
-Open <http://127.0.0.1:5173> — the app boots into mock mode with a local,
-deterministic cluster. The backend API is at <http://127.0.0.1:8000>, with
-interactive OpenAPI docs at <http://127.0.0.1:8000/docs>.
+The demo uses bundled data and works without a cluster connection.
 
-To connect a real cluster over SSH, see the
-[configuration guide](docs/configuration.md) and the
-[getting started](docs/getting-started.md) docs.
+## Install
 
-## Documentation
+```sh
+make install-bin
+~/.local/bin/cluster-monitor --demo
+```
 
-All sections live in the [`docs/`](docs/) folder:
+`make install-bin` builds an optimized native binary for the current OS and
+architecture. Set `BINDIR` to choose the destination. You can also install
+through Cargo with `cargo install --path . --locked`. Run `cluster-monitor`
+directly when its installation directory is in your `PATH`.
 
-| Section | Contents |
+## Connect a cluster
+
+Create a starter config and print its location.
+
+```sh
+cluster-monitor --init-config
+cluster-monitor --config-path
+```
+
+The default path is `~/.config/cluster-monitor/config.yaml`. An absolute
+`XDG_CONFIG_HOME` changes the base directory. Add an SSH cluster to that
+YAML file, using an alias from your OpenSSH configuration.
+
+```yaml
+clusters:
+  - id: research
+    name: Research cluster
+    backend: ssh
+    ssh_host: research-hpc
+    slurm_user: current
+```
+
+Start on that cluster with `cluster-monitor --cluster research` or select it
+inside the app with `c`. Use `--config PATH` to load a specific file.
+If the default config is absent, the monitor starts in demo mode. See the
+[configuration guide](docs/configuration.md) for SSH setup and refresh intervals.
+
+## Use the dashboard
+
+| View | What you can inspect |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Component diagram and repository layout |
-| [Getting started](docs/getting-started.md) | Prerequisites, mock-mode quick start, manual setup |
-| [Configuration](docs/configuration.md) | YAML clusters, OpenSSH aliases, live-cluster setup |
-| [API](docs/api.md) | Endpoint reference |
-| [Security](docs/security.md) | Threat model and safety guarantees |
-| [Development](docs/development.md) | Commands, known limitations, roadmap |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
+| **1 · Overview** | Partition availability, node allocation, time limits, and a heatmap of used, idle, and other nodes |
+| **2 · Queue** | Running and pending jobs, elapsed time, and pending reasons |
+| **3 · History** | Up to 500 finished jobs from the past seven days and available accounting details |
+| **4 · Nodes** | Node states, CPU allocation, memory, partitions, and GPUs |
 
-## Contributing
+| Key | Action |
+| --- | --- |
+| `1`–`4`, `Tab`, or `Shift+Tab` | Switch views |
+| `↑` `↓` or `j` `k` | Move the selection |
+| `Enter` | Open the full record |
+| `/` and `f` | Search by text or filter by state |
+| `Esc` | Close a panel or clear filters |
+| `s` | Cycle default, name, and state sort |
+| `r` and `p` | Refresh or pause polling |
+| `c`, `?`, and `q` | Choose a cluster, show shortcuts, or quit |
 
-See the [development guide](docs/development.md) for commands, testing, and
-the roadmap. This is a personal learning project; issues and pull requests are
-welcome on [GitHub](https://github.com/LucianCrainic/cluster-monitor).
+Click a view or row to select it. The state picker shows counts for the current
+view, and the state and text filters work together. On wide terminals, the
+selection preview sits beside the full-height table. Press `Enter` for details
+at any size.
 
-## License
+On Overview, the partition table sits above the heatmap when space allows.
+The heatmap follows the table's filters and selection. Click a group of tiles
+to select its partition. Every partition uses the same grid size so you can
+compare the proportions of used, idle, and other nodes. The table shows the
+exact counts.
 
-Released under the [MIT License](LICENSE).
+The dashboard inherits your terminal's ANSI palette and background, including
+the opacity set by your terminal profile. If a refresh fails, the last
+successful snapshot stays visible and is marked stale.
+
+## Development
+
+Ratatui and Crossterm render the interface. Tokio runs read-only Slurm queries
+through OpenSSH, and the client supports both JSON and fixed-field responses.
+
+```sh
+cargo test --locked
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+```
+
+See the [architecture](docs/architecture.md), [developer commands](docs/development.md),
+and [troubleshooting guide](docs/troubleshooting.md). Released under the
+[MIT License](LICENSE).
