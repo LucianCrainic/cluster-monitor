@@ -1,7 +1,17 @@
-# Slurm Monitor
+<div align="center">
 
-A read-only Slurm dashboard that runs in your terminal. Inspect partition
+<img src="docs/assets/banner.svg" alt="Slurm Monitor terminal dashboard banner" width="100%" />
+
+[![Rust](https://img.shields.io/badge/Rust-1.88%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Ratatui](https://img.shields.io/badge/Terminal_UI-Ratatui-5b8)](https://ratatui.rs/)
+[![Slurm](https://img.shields.io/badge/Scheduler-Slurm-2f6f9f)](https://slurm.schedmd.com/)
+[![OpenSSH](https://img.shields.io/badge/Connection-OpenSSH-3d7b57)](https://www.openssh.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**A read-only Slurm dashboard that runs in your terminal.** Inspect partition
 capacity, active queues, recent accounting, and node resources over OpenSSH.
+
+</div>
 
 ![Slurm Monitor demo showing the rounded queue, summary, and selection panes](docs/assets/slurm-monitor.png)
 
